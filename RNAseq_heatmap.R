@@ -60,13 +60,12 @@ mycount_df$ENSEMBL <- rownames(mycount_df)
 new_df <- mycount_df %>% left_join(.,gene_df, by="ENSEMBL")
 mat <- mycount_df %>% filter(.,rownames(mycount_df) %in% list) %>% 
   left_join(.,gene_df, by="ENSEMBL") %>% group_by(SYMBOL) %>%
-  summarize(across(where(is.numeric), sum))
-rownames(mat) <- mat$SYMBOL
-data_mat <- mat %>% select(ip_L_V_L_CON,ip_L_V_L_DMS,ip_L_V_L_CO,ip_L_V_L_BAP,ip_L_V_L_CO_BAP)
-rownames(data_mat) <- mat$SYMBOL
-mat_scale <- data_mat %>% t() %>% scale(scale = T) %>% t() %>% as.matrix()
-rownames(mat_scale) <- mat$SYMBOL
-mat_scale <- mat_scale %>% na.omit()
+  summarize(across(where(is.numeric), sum)) %>% 
+  column_to_rownames(., var = "SYMBOL") %>% 
+  select(ip_L_V_L_CON,ip_L_V_L_DMS,ip_L_V_L_CO,ip_L_V_L_BAP,ip_L_V_L_CO_BAP)
+
+mat_scale <- mat %>% t() %>% scale(scale = T) %>% t() %>% as.matrix() %>% na.omit()
+
 
 col <- colnames(mat1)
 # agent name
@@ -112,29 +111,29 @@ draw_heatmap <- function(data_path=data_path,
   new_df <- mycount_df %>% left_join(.,gene_df, by="ENSEMBL")
   mat <- mycount_df %>% filter(.,rownames(mycount_df) %in% list) %>% 
     left_join(.,gene_df, by="ENSEMBL") %>% group_by(SYMBOL) %>%
-    summarize(across(where(is.numeric), sum))
-  rownames(mat) <- mat$SYMBOL
-  
+    summarize(across(where(is.numeric), sum)) %>% 
+    column_to_rownames(., var = "SYMBOL")
+
   if(groups == "AS"){
-    data_mat <- mat %>% select(ip_L_V_L_CON,ip_L_V_L_DMS,ip_L_V_L_AS,ip_L_V_L_BAP,ip_L_V_L_AS_BAP)
+    data_mat <- mat %>% select(ip_Y_V_S_CON,ip_Y_V_S_DMS,ip_Y_V_S_AS,ip_Y_V_S_BAP,ip_Y_V_S_AS_BAP)
   } else if(groups == "CO"){
-    data_mat <- mat %>% select(ip_L_V_L_CON,ip_L_V_L_DMS,ip_L_V_L_CO,ip_L_V_L_BAP,ip_L_V_L_CO_BAP)
+    data_mat <- mat %>% select(ip_Y_V_S_CON,ip_Y_V_S_DMS,ip_Y_V_S_CO,ip_Y_V_S_BAP,ip_Y_V_S_CO_BAP)
   } else if(groups == "CD"){
-    data_mat <- mat %>% select(ip_L_V_L_CON,ip_L_V_L_DMS,ip_L_V_L_LCD,ip_L_V_L_HCD,
-                               ip_L_V_L_BAP,ip_L_V_L_LCD_BAP,ip_L_V_L_HCD_BAP)
+    data_mat <- mat %>% select(ip_Y_V_S_CON,ip_Y_V_S_DMS,ip_Y_V_S_LCD,ip_Y_V_S_HCD,
+                               ip_Y_V_S_BAP,ip_Y_V_S_LCD_BAP,ip_Y_V_S_HCD_BAP)
+  } else if(groups == "BAP"){
+    data_mat <- mat %>% select(ip_Y_V_S_CON,ip_Y_V_S_DMS,ip_Y_V_S_BAP,ip_Y_V_S_AS_BAP
+                               ,ip_Y_V_S_CO_BAP,ip_Y_V_S_LCD_BAP,ip_Y_V_S_HCD_BAP)
   } else{
     cat(c("<- please type in groups", "\n"))
     break
   }
   cat(c("<- filtering data", "\n"))
   
-  rownames(data_mat) <- mat$SYMBOL
-  mat_scale <- data_mat %>% t() %>% scale(scale = T) %>% t() %>% as.matrix()
-  rownames(mat_scale) <- mat$SYMBOL
-  mat_scale <- mat_scale %>% na.omit()
-  col <- colnames(mat_scale)
-  
+  mat_scale <- data_mat %>% t() %>% scale(scale = T) %>% t() %>% as.matrix() %>% na.omit()
   cat(c("<- annotation", "\n"))
+  
+  col <- colnames(mat_scale)
   
   # agent name
   agent <- factor (
@@ -164,4 +163,5 @@ draw_heatmap <- function(data_path=data_path,
   )
   
 }
-draw_heatmap(data_path = data_path ,file = "ip_L_V_L_HCD_0_deg.xlsx",groups = "CD",log_crit = 4)
+data_path <- "/Users/benson/Documents/raw_data/RNA-seq1/raw/Y_L_V"
+draw_heatmap(data_path = data_path ,file = "ip_Y_V_S_BAP_0_deg.xlsx",groups = "AS",log_crit = 4)
