@@ -35,13 +35,14 @@ clone <- factor(
 
 #draw hp
 ha <- HeatmapAnnotation(agent = agent, clone = clone,
-                       col = list(agent=c('CON'='#c44dff', 'DMS'='#ff0066', 'AZA'='#ff99cc', 'DAC'='#66ffff',
-                                          'AS'='#b3ff66','CO'='#000000','LCD'='#999999',
-                                          'HCD'='#008ae6', 'BAP'='#ffff00', 'AS_BAP'='#663300', 'CO_BAP'= '#008000',
-                                          'LCD_BAP'= 'pink', "HCD_BAP"="orange"),
-                                  clone=c('WT'="red",'L858R'="orange",
-                                          "DEL19"= "yellow","YAP"="green")))
+                       col = list(agent=c('CON'='#E0E0E0', 'DMS'='#ADADAD', 'AZA'='#FFD2D2', 'DAC'='#FF9797',
+                                          'AS'='#FFFF37','CO'='#FF5151','LCD'='#0080FF',
+                                          'HCD'='#005AB5', 'BAP'='#00DB00', 'AS_BAP'='#FFDC35', 'CO_BAP'= '#EA0000',
+                                          'LCD_BAP'= '#0000E3', "HCD_BAP"="#000079"),
+                                  clone=c('WT'="#FF2D2D",'L858R'="#FF9224",
+                                          "DEL19"= "#66B3FF","YAP"="#2828FF")))
 
 ComplexHeatmap::Heatmap(df_log, top_annotation = ha, cluster_columns = F, 
-                        show_row_names = F, show_column_names = F
+                        show_row_names = F, show_column_names = F,
+                        name = "Z-score"
                         )
