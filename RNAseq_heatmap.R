@@ -126,6 +126,10 @@ draw_heatmap <- function(data_path=data_path,
   } else if(groups == "BAP"){
     data_mat <- mat %>% select(ip_Y_V_S_CON,ip_Y_V_S_DMS,ip_Y_V_S_BAP,ip_Y_V_S_AS_BAP
                                ,ip_Y_V_S_CO_BAP,ip_Y_V_S_LCD_BAP,ip_Y_V_S_HCD_BAP)
+  } else if(groups == "ALL"){
+    data_mat <- mat %>% select(ip_Y_V_S_CON,ip_Y_V_S_DMS,ip_Y_V_S_AS,ip_Y_V_S_CO,
+                               ip_Y_V_S_LCD,ip_Y_V_S_HCD,ip_Y_V_S_BAP,ip_Y_V_S_AS_BAP,
+                               ip_Y_V_S_CO_BAP,ip_Y_V_S_LCD_BAP,ip_Y_V_S_HCD_BAP)
   } else{
     cat(c("<- please type in groups", "\n"))
     break
@@ -166,7 +170,7 @@ draw_heatmap <- function(data_path=data_path,
   
 }
 
-draw_heatmap(data_path = data_path ,file = "ip_Y_V_S_BAP_0_deg.xlsx",groups = "CO",log_crit = 4)
+draw_heatmap(data_path = data_path ,file = "ip_Y_V_S_BAP_0_deg.xlsx",groups = "ALL",log_crit = 4)
 # draw heatmap form a list ------------------------------------------------
 draw_from_list <- function(list,
                            groups=groups,
@@ -206,6 +210,10 @@ draw_from_list <- function(list,
   } else if(groups == "BAP"){
     data_mat <- mat %>% select(ip_Y_V_S_CON,ip_Y_V_S_DMS,ip_Y_V_S_BAP,ip_Y_V_S_AS_BAP
                                ,ip_Y_V_S_CO_BAP,ip_Y_V_S_LCD_BAP,ip_Y_V_S_HCD_BAP)
+  } else if(groups == "ALL"){
+    data_mat <- mat %>% select(ip_Y_V_S_CON,ip_Y_V_S_DMS,ip_Y_V_S_AS,ip_Y_V_S_CO,
+                               ip_Y_V_S_LCD,ip_Y_V_S_HCD,ip_Y_V_S_BAP,ip_Y_V_S_AS_BAP,
+                               ip_Y_V_S_CO_BAP,ip_Y_V_S_LCD_BAP,ip_Y_V_S_HCD_BAP)
   } else{
     cat(c("<- please type in groups", "\n"))
     break
@@ -246,15 +254,15 @@ draw_from_list <- function(list,
   
 }
 
-list <- c("CYP1A1","MTF1","MTG1")
-draw_from_list(list = list,groups = "AS",id = "SYMBOL")
+list <- c("TP53","BRCA2","MTG1")
+draw_from_list(list = list,groups = "ALL",id = "SYMBOL")
 
 # get DEG list ------------------------------------------------------------
 get_deg <- function(data_path=data_path,
                     file=file,
                     log_crit = c(1,-1),
                     dir="all"  # all/up/down
-){
+                    ){
   data <- readxl::read_xlsx(file.path(data_path, file)) # 讀檔
   if(dir=="all"){
     data <- data %>% filter(abs(M)>log_crit[1])
@@ -273,7 +281,7 @@ get_deg <- function(data_path=data_path,
 BAP_all <- get_deg(data_path = data_path,file = "ip_Y_V_S_BAP_0_deg.xlsx",
                    log_crit = c(1,-1),dir = "up")
 
-draw_from_list(list = BAP_all,groups = "AS",id = "ENSEMBL")
+draw_from_list(list = BAP_all,groups = "ALL",id = "ENSEMBL")
 
 # marker gene list --------------------------------------------------------
 ecto_list1 <- read.table("./marker_list/List_Gifford_EctoMarkers.txt") %>% as.list() %>% unlist()
