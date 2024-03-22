@@ -165,6 +165,9 @@ draw_heatmap <- function(data_path=data_path,
   )
   
 }
+
+draw_heatmap(data_path = data_path ,file = "ip_Y_V_S_BAP_0_deg.xlsx",groups = "CO",log_crit = 4)
+# draw heatmap form a list ------------------------------------------------
 draw_from_list <- function(list,
                            groups=groups,
                            id="ENSEMBL"  # ENSEMBL/SYMBOL
@@ -242,6 +245,11 @@ draw_from_list <- function(list,
   )
   
 }
+
+list <- c("CYP1A1","MTF1","MTG1")
+draw_from_list(list = list,groups = "AS",id = "SYMBOL")
+
+# get DEG list ------------------------------------------------------------
 get_deg <- function(data_path=data_path,
                     file=file,
                     log_crit = c(1,-1),
@@ -262,8 +270,22 @@ get_deg <- function(data_path=data_path,
   return(list)# 抓出差異ensembl id
 }
 
-draw_heatmap(data_path = data_path ,file = "ip_Y_V_S_BAP_0_deg.xlsx",groups = "CO",log_crit = 4)
-list <- c("CYP1A1","MTG1")
-draw_from_list(list = list,groups = "AS",id = "SYMBOL")
 BAP_all <- get_deg(data_path = data_path,file = "ip_Y_V_S_BAP_0_deg.xlsx",
-                   log_crit = c(1,-1),dir = "up" )
+                   log_crit = c(1,-1),dir = "up")
+
+draw_from_list(list = BAP_all,groups = "AS",id = "ENSEMBL")
+
+# marker gene list --------------------------------------------------------
+ecto_list1 <- read.table("./marker_list/List_Gifford_EctoMarkers.txt") %>% as.list() %>% unlist()
+endo_list1 <- read.table("./marker_list/List_Gifford_EndoMarkers.txt") %>% as.list() %>% unlist()
+meso_list1 <- read.table("./marker_list/List_Gifford_MesoMarkers.txt") %>% as.list() %>% unlist()
+pluri_list1 <- read.table("./marker_list/List_Gifford_PluriMarkers.txt") %>% as.list() %>% unlist()
+
+ecto_list2 <- read.table("./marker_list/List_Hutchins_EctoMarkers.txt") %>% as.list() %>% unlist()
+endo_list2 <- read.table("./marker_list/List_Hutchins_EndoMarkers.txt") %>% as.list() %>% unlist()
+meso_list2 <- read.table("./marker_list/List_Hutchins_MesoMarkers.txt") %>% as.list() %>% unlist()
+pluri_list2 <- read.table("./marker_list/List_Hutchins_PluriMarkers.txt") %>% as.list() %>% unlist()
+
+pluri_list3 <- read.table("./marker_list/List_Sperger_PluriMarkers.txt") %>% as.list() %>% unlist()
+
+draw_from_list(list = pluri_list3,groups = "CO",id = "SYMBOL")
