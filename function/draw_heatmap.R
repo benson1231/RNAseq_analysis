@@ -1,28 +1,4 @@
-#################################################################################################################
-# load raw reads counts ---------------------------------------------------------------
-raw_counts_df <- read.csv("/Users/benson/Documents/project/RNA-seq1/mycounts_f.txt")
-
-mycount_df <- raw_counts_df %>% 
-  select(.,ip_L_V_L_CON,ip_L_V_L_DMS,ip_L_V_L_AZA,ip_L_V_L_DAC,
-         ip_L_V_L_AS,ip_L_V_L_CO,ip_L_V_L_LCD,ip_L_V_L_HCD,
-         ip_L_V_L_BAP, ip_L_V_L_AS_BAP, ip_L_V_L_CO_BAP,
-         ip_L_V_L_LCD_BAP,ip_L_V_L_HCD_BAP,
-         ip_Y_V_S_CON,ip_Y_V_S_DMS,ip_Y_V_S_AZA,ip_Y_V_S_DAC,
-         ip_Y_V_S_AS,ip_Y_V_S_CO,ip_Y_V_S_LCD,ip_Y_V_S_HCD,
-         ip_Y_V_S_BAP, ip_Y_V_S_AS_BAP, ip_Y_V_S_CO_BAP,
-         ip_Y_V_S_LCD_BAP,ip_Y_V_S_HCD_BAP) 
-
-rownames(mycount_df) <- raw_counts_df$ENSEMBL
-# df <- raw_counts_df[,grepl("ip_L_V_L|ip_Y_V_S", colnames(mycount_df))]
-
-# 抓出含有ensembl/symbol df
-data_path <- "/Users/benson/Documents/raw_data/RNA-seq1/raw/Y_L_V"
-gene_df <- readxl::read_xlsx(file.path(data_path, "ip_Y_V_S_BAP_0_deg.xlsx")) %>% 
-  select(ENSEMBL,SYMBOL) 
-
-
-#################################################################################################################
-# create function
+### function
 draw_heatmap <- function(data_path=data_path,
                          file=file,
                          log_crit=3,
@@ -88,5 +64,6 @@ draw_heatmap <- function(data_path=data_path,
   )
   
 }
-# use function
+
+### use function
 draw_heatmap(data_path = data_path ,file = "ip_Y_V_S_BAP_0_deg.xlsx",groups = "CO",log_crit = 4)
