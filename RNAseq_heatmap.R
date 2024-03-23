@@ -1,8 +1,7 @@
 # library -----------------------------------------------------------------
-library(magrittr)
 library(tidyverse)
-library(stringr)
 library(ComplexHeatmap)
+library(ggVennDiagram)
 
 # load raw reads counts ---------------------------------------------------------------
 raw_counts_df <- read.csv("/Users/benson/Documents/project/RNA-seq1/mycounts_f.txt")
@@ -170,7 +169,7 @@ draw_heatmap <- function(data_path=data_path,
   
 }
 
-draw_heatmap(data_path = data_path ,file = "ip_Y_V_S_BAP_0_deg.xlsx",groups = "ALL",log_crit = 4)
+draw_heatmap(data_path = data_path ,file = "ip_Y_V_S_CO_0_deg.xlsx",groups = "CO",log_crit = 4)
 # draw heatmap form a list ------------------------------------------------
 draw_from_list <- function(list,
                            groups=groups,
@@ -254,34 +253,9 @@ draw_from_list <- function(list,
   
 }
 
-list <- c("TP53","BRCA2","MTG1")
+list <- c("POLG","POLH","POLQ","POLI","POLM","POLN","POLB","XPC","CHEK2")
 draw_from_list(list = list,groups = "ALL",id = "SYMBOL")
 
-# get DEG list ------------------------------------------------------------
-get_deg <- function(data_path=data_path,
-                    file=file,
-                    log_crit = c(1,-1),
-                    dir="all"  # all/up/down
-                    ){
-  data <- readxl::read_xlsx(file.path(data_path, file)) # 讀檔
-  if(dir=="all"){
-    data <- data %>% filter(abs(M)>log_crit[1])
-  }else if(dir=="up"){
-    data <- data %>% filter(M > log_crit[1])
-  }else if(dir=="down"){
-    data <- data %>% filter(abs(M)< log_crit[2])
-  }else{
-    cat(c("<- error, check direction", "\n"))
-  }
-  data <- data %>% filter(abs(M)>log_crit)  # filter log2FC criteria
-  list <- data$ENSEMBL 
-  return(list)# 抓出差異ensembl id
-}
-
-BAP_all <- get_deg(data_path = data_path,file = "ip_Y_V_S_BAP_0_deg.xlsx",
-                   log_crit = c(1,-1),dir = "up")
-
-draw_from_list(list = BAP_all,groups = "ALL",id = "ENSEMBL")
 
 # marker gene list --------------------------------------------------------
 ecto_list1 <- read.table("./marker_list/List_Gifford_EctoMarkers.txt") %>% as.list() %>% unlist()
@@ -297,3 +271,42 @@ pluri_list2 <- read.table("./marker_list/List_Hutchins_PluriMarkers.txt") %>% as
 pluri_list3 <- read.table("./marker_list/List_Sperger_PluriMarkers.txt") %>% as.list() %>% unlist()
 
 draw_from_list(list = pluri_list3,groups = "CO",id = "SYMBOL")
+
+# get DEG list ------------------------------------------------------------
+get_deg <- function(data_path=data_path,
+                    file=file,
+                    log_crit = c(1,-1),
+                    dir="all"  # all/up/down
+){
+  data <- readxl::read_xlsx(file.path(data_path, file)) # 讀檔
+  if(dir=="all"){
+    data <- data %>% filter(M >log_crit[1]| M < log_crit[2])
+  }else if(dir=="up"){
+    data <- data %>% filter(M > log_crit[1])
+  }else if(dir=="down"){
+    data <- data %>% filter(M < log_crit[2])
+  }else{
+    cat(c("<- error, check direction", "\n"))
+  }
+  data <- data %>% filter(abs(M)>log_crit)  # filter log2FC criteria
+  list <- data$ENSEMBL 
+  return(list)# 抓出差異ensembl id
+}
+
+BAP_all <- get_deg(data_path = data_path,file = "ip_Y_V_S_BAP_0_deg.xlsx",
+                   log_crit = c(1,-1),dir = "all")
+AS_all <- get_deg(data_path = data_path,file = "ip_Y_V_S_AS_0_deg.xlsx",
+                  log_crit = c(1,-1),dir = "all")
+AS_BAP_all <- get_deg(data_path = data_path,file = "ip_Y_V_S_AS_BAP_0_deg.xlsx",
+                  log_crit = c(1,-1),dir = "all")
+
+draw_from_list(list = BAP_all,groups = "ALL",id = "ENSEMBL")
+
+# venn diagram ------------------------------------------------------------
+AS_gene <- list(As = AS_all,
+                BAP = BAP_all,
+                AS_BAP =AS_BAP_all)
+
+ggVennDiagram(AS_gene,label_percent_digit = 2) + scale_fill_gradient(low="blue",high = "red")
+
+
