@@ -104,12 +104,90 @@ ComplexHeatmap::Heatmap(mat_scale, top_annotation = ha, cluster_columns = F,
 
 
 # draw heatmap function ---------------------------------------------------
+### function
+draw_heatmap <- function(data_path=data_path,
+                         file=file,
+                         log_crit=3,
+                         groups=groups
+){
+  data <- readxl::read_xlsx(file.path(data_path, file)) # 讀檔
+  data <- data %>% filter(abs(M)>log_crit)  # filter log2FC criteria
+  list <- data$ENSEMBL  # 抓出差異ensembl id
+  gene_df <- data[,c("ENSEMBL","SYMBOL")] # 
+  mycount_df$ENSEMBL <- rownames(mycount_df)
+  new_df <- mycount_df %>% left_join(.,gene_df, by="ENSEMBL")
+  mat <- mycount_df %>% filter(.,rownames(mycount_df) %in% list) %>% 
+    left_join(.,gene_df, by="ENSEMBL") %>% group_by(SYMBOL) %>%
+    summarize(across(where(is.numeric), sum)) %>% 
+    column_to_rownames(., var = "SYMBOL")
+  
+  if(groups == "AS"){
+    data_mat <- mat %>% select(ip_Y_V_S_CON,ip_Y_V_S_DMS,ip_Y_V_S_AS,ip_Y_V_S_BAP,ip_Y_V_S_AS_BAP)
+  } else if(groups == "CO"){
+    data_mat <- mat %>% select(ip_Y_V_S_CON,ip_Y_V_S_DMS,ip_Y_V_S_CO,ip_Y_V_S_BAP,ip_Y_V_S_CO_BAP)
+  } else if(groups == "CD"){
+    data_mat <- mat %>% select(ip_Y_V_S_CON,ip_Y_V_S_DMS,ip_Y_V_S_LCD,ip_Y_V_S_HCD,
+                               ip_Y_V_S_BAP,ip_Y_V_S_LCD_BAP,ip_Y_V_S_HCD_BAP)
+  } else if(groups == "BAP"){
+    data_mat <- mat %>% select(ip_Y_V_S_CON,ip_Y_V_S_DMS,ip_Y_V_S_BAP,ip_Y_V_S_AS_BAP
+                               ,ip_Y_V_S_CO_BAP,ip_Y_V_S_LCD_BAP,ip_Y_V_S_HCD_BAP)
+  } else if(groups == "ALL"){
+    data_mat <- mat %>% select(ip_Y_V_S_CON,ip_Y_V_S_DMS,ip_Y_V_S_AZA,ip_Y_V_S_DAC,
+                               ip_Y_V_S_AS,ip_Y_V_S_CO,
+                               ip_Y_V_S_LCD,ip_Y_V_S_HCD,ip_Y_V_S_BAP,ip_Y_V_S_AS_BAP,
+                               ip_Y_V_S_CO_BAP,ip_Y_V_S_LCD_BAP,ip_Y_V_S_HCD_BAP)
+  } else{
+    cat(c("<- please type in groups", "\n"))
+    break
+  }
+
+  cat(c("<- filtering data", "\n"))
+  
+  mat_scale <- data_mat %>% t() %>% scale(scale = T) %>% t() %>% as.matrix() %>% na.omit()
+  cat(c("<- annotation", "\n"))
+  
+  col <- colnames(mat_scale)
+  
+  # agent name
+  agent <- factor (
+    str_replace_all(col, c("ip_L_V_L_|ip_Y_V_S_"='')),
+    levels=c('CON','DMS',"AZA","DAC",'AS',"CO","LCD","HCD","BAP",
+             "AS_BAP","CO_BAP","LCD_BAP","HCD_BAP"))
+  
+  # clone name
+  clone <- factor( 
+    str_replace_all(str_sub(col, 4,4), c("W" = "WT", "L" = "L858R", 
+                                         "D" = "DEL19", "Y" = "YAP")),
+    levels=c('WT','L858R',"DEL19","YAP"))
+  
+  # draw hp
+  ha <- HeatmapAnnotation(agent = agent, clone = clone,
+                          col = list(agent=c('CON'='#E0E0E0', 'DMS'='#ADADAD', 'AZA'='#FFD2D2', 'DAC'='#FF9797',
+                                             'AS'='#FFFF37','CO'='#FF5151','LCD'='#0080FF',
+                                             'HCD'='#005AB5', 'BAP'='#00DB00', 'AS_BAP'='#FFDC35', 'CO_BAP'= '#EA0000',
+                                             'LCD_BAP'= '#0000E3', "HCD_BAP"="#000079"),
+                                     clone=c('WT'="#FF2D2D",'L858R'="#FF9224",
+                                             "DEL19"= "#66B3FF","YAP"="#2828FF")))
+  cat(c("<- drawing heatmap", "\n"))
+  
+  ComplexHeatmap::Heatmap(mat_scale, top_annotation = ha, cluster_columns = F, 
+                          show_row_names = T, show_column_names = F,
+                          name = "Z-score"
+  )
+  
+}
+
+### use function
+draw_heatmap(data_path = data_path ,file = "ip_Y_V_S_BAP_0_deg.xlsx",groups = "CO",log_crit = 4)
+
+draw_heatmap(data_path = data_path ,file = "ip_Y_V_S_CO_0_deg.xlsx",groups = "ALL",log_crit = 2)
+# draw heatmap form a list ------------------------------------------------
 draw_from_list <- function(list,
                            groups=groups,
                            id="ENSEMBL",
                            cluster=TRUE,
                            anno=TRUE,
-                           title# ENSEMBL/SYMBOL
+                           title=""# ENSEMBL/SYMBOL
 ){
   if(id=="ENSEMBL"){
     list <- list  
@@ -194,97 +272,9 @@ draw_from_list <- function(list,
                             name = "Z-score", row_title = title
     )
   }
-  
-  
 }
 
-draw_heatmap(data_path = data_path ,file = "ip_Y_V_S_CO_0_deg.xlsx",groups = "ALL",log_crit = 2)
-# draw heatmap form a list ------------------------------------------------
-draw_from_list <- function(list,
-                           groups=groups,
-                           id="ENSEMBL",
-                           cluster=TRUE# ENSEMBL/SYMBOL
-                           ){
-  if(id=="ENSEMBL"){
-    list <- list  
-    mycount_df$ENSEMBL <- rownames(mycount_df)
-    new_df <- mycount_df %>% left_join(.,gene_df, by="ENSEMBL")
-    mat <- mycount_df %>% filter(.,rownames(mycount_df) %in% list) %>% 
-      left_join(.,gene_df, by="ENSEMBL") %>% group_by(SYMBOL) %>%
-      summarize(across(where(is.numeric), sum)) %>% na.omit() %>% 
-      column_to_rownames(., var = "SYMBOL")
-  }else if(id=="SYMBOL"){
-    list <- list  
-    mycount_df$ENSEMBL <- rownames(mycount_df)
-    new_df <- mycount_df %>% 
-      left_join(.,gene_df, by="ENSEMBL") %>% 
-      group_by(SYMBOL) %>%
-      summarize(across(where(is.numeric), sum)) %>% 
-      na.omit() %>% 
-      column_to_rownames(.,var="SYMBOL") 
-    mat <- new_df %>% 
-      filter(.,rownames(new_df) %in% list)
-  }else{
-    cat(c("<- error, check gene id", "\n"))
-    break
-  }
-  
-  if(groups == "AS"){
-    data_mat <- mat %>% select(ip_Y_V_S_CON,ip_Y_V_S_DMS,ip_Y_V_S_AS,ip_Y_V_S_BAP,ip_Y_V_S_AS_BAP)
-  } else if(groups == "CO"){
-    data_mat <- mat %>% select(ip_Y_V_S_CON,ip_Y_V_S_DMS,ip_Y_V_S_CO,ip_Y_V_S_BAP,ip_Y_V_S_CO_BAP)
-  } else if(groups == "CD"){
-    data_mat <- mat %>% select(ip_Y_V_S_CON,ip_Y_V_S_DMS,ip_Y_V_S_LCD,ip_Y_V_S_HCD,
-                               ip_Y_V_S_BAP,ip_Y_V_S_LCD_BAP,ip_Y_V_S_HCD_BAP)
-  } else if(groups == "BAP"){
-    data_mat <- mat %>% select(ip_Y_V_S_CON,ip_Y_V_S_DMS,ip_Y_V_S_BAP,ip_Y_V_S_AS_BAP
-                               ,ip_Y_V_S_CO_BAP,ip_Y_V_S_LCD_BAP,ip_Y_V_S_HCD_BAP)
-  } else if(groups == "ALL"){
-    data_mat <- mat %>% select(ip_Y_V_S_CON,ip_Y_V_S_DMS,ip_Y_V_S_AZA,ip_Y_V_S_DAC,
-                               ip_Y_V_S_AS,ip_Y_V_S_CO,
-                               ip_Y_V_S_LCD,ip_Y_V_S_HCD,ip_Y_V_S_BAP,ip_Y_V_S_AS_BAP,
-                               ip_Y_V_S_CO_BAP,ip_Y_V_S_LCD_BAP,ip_Y_V_S_HCD_BAP)
-  } else{
-    cat(c("<- please type in groups", "\n"))
-    break
-  }
-  cat(c("<- filtering data", "\n"))
-  
-  mat_scale <- data_mat %>% t() %>% scale() %>% t() %>% as.matrix() %>% na.omit()
-  cat(c("<- annotation", "\n"))
-  
-  col <- colnames(mat_scale)
-  
-  # agent name
-  agent <- factor (
-    str_replace_all(col, c("ip_L_V_L_|ip_Y_V_S_"='')),
-    levels=c('CON','DMS',"AZA","DAC",'AS',"CO","LCD","HCD","BAP",
-             "AS_BAP","CO_BAP","LCD_BAP","HCD_BAP"))
-  
-  # clone name
-  clone <- factor( 
-    str_replace_all(str_sub(col, 4,4), c("W" = "WT", "L" = "L858R", 
-                                         "D" = "DEL19", "Y" = "YAP")),
-    levels=c('WT','L858R',"DEL19","YAP"))
-  
-  # draw hp
-  ha <- HeatmapAnnotation(agent = agent, clone = clone,
-                          col = list(agent=c('CON'='#E0E0E0', 'DMS'='#ADADAD', 'AZA'='#FFD2D2', 'DAC'='#FF9797',
-                                             'AS'='#FFFF37','CO'='#FF7575','LCD'='#0080FF',
-                                             'HCD'='#005AB5', 'BAP'='#00DB00', 'AS_BAP'='#FFD306', 'CO_BAP'= '#FF0000',
-                                             'LCD_BAP'= '#0000E3', "HCD_BAP"="#000079"),
-                                     clone=c('WT'="#FF2D2D",'L858R'="#FF9224",
-                                             "DEL19"= "#66B3FF","YAP"="#2828FF")))
-  cat(c("<- drawing heatmap", "\n"))
-  
-  ComplexHeatmap::Heatmap(mat_scale, top_annotation = ha, cluster_columns = F, 
-                          show_row_names = T, show_column_names = F,cluster_rows = cluster,
-                          name = "Z-score"
-  )
-  
-}
-
-list <- c("CYP1A1","CYP1B1")
+list <- c("CYP1A1","CYP1B1","GADD45B")
 draw_from_list(list = list,groups = "ALL",id = "SYMBOL")
 
 
@@ -313,7 +303,15 @@ meso <- c("ABCA4","ALOX15","BMP10","CDH5","CDX2","ESM1","FCN3","FOXF1","HAND1",
 mesendo <- c("FGF4","GDF3","NPPB","NR5A2","PTHLH","BRACHYURY")
 pluri <- c("CXCL5","DNMT3B","HESX1","IDO1","LCK","NANOG","POU5F1","SOX2","TRIM22")
 
-draw_from_list(list = c(ecto=ecto, endo=endo),groups = "ALL",id = "SYMBOL",cluster = F)
+p1 <- draw_from_list(list = ecto,groups = "ALL",
+                     id = "SYMBOL",title ="ectoderm")
+p2 <- draw_from_list(list = endo,groups = "ALL",
+                     id = "SYMBOL",title ="endoderm",anno = F)
+p3 <- draw_from_list(list = meso,groups = "ALL",
+                     id = "SYMBOL",title ="mesoderm",anno = F)
+p4 <- draw_from_list(list = pluri,groups = "ALL",
+                     id = "SYMBOL",title ="pluripotency",anno = F)
+p1 %v% p2 %v% p3 %v% p4
 
 # from gene card
 genelist <- read.csv("/Users/benson/Downloads/GeneCards-SearchResults.csv") %>% 
@@ -405,3 +403,8 @@ cc_list <- c("ATM", "ATR", "BUB1", "BUB1B", "BUB3", "CCNA1", "CCNA2",
 
 draw_from_list(list = cc_list,groups = "ALL",id = "SYMBOL",anno = F)
 
+p1 <- draw_from_list(list = ner_list,groups = "ALL",
+                     id = "SYMBOL",title ="NER")
+p2 <- draw_from_list(list = nhej_list,groups = "ALL",
+                     id = "SYMBOL",title ="NHEJ",anno = F)
+p1 %v% p2
