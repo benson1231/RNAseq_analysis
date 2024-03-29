@@ -19,7 +19,7 @@ kegg_run <- function(data_path=data_path,
       cat(c(" <- error: check list_id","\n"))
       return(NULL)
     }
-    cat(c(" >- input selected gene and run ORA"))
+    cat(c(" >- input selected gene and run ORA","\n"))
   } 
   
   # change KEGG Organism Code from https://www.genome.jp/kegg/catalog/org_list.html 
