@@ -7,69 +7,22 @@ library(pathview)
 library(cowplot)
 library(DOSE)
 
-# gsea分析寫成一個function ----------------------------------------------
-rungsea <- function(dir,
-                    organism = "org.Hs.eg.db",
-                    ont = "ALL",
-                    keyType = "ENSEMBL"){
-  df <- readxl::read_xlsx(dir)  # read file
-  organism <- organism  # set organism
-  original_gene_list <- df$log2FC_noi  # input log2FC column
-  names(original_gene_list) <- df$ensembl_gene_id  # input ID column
-  gsea_gene_list_w <- na.omit(original_gene_list) %>% 
-    sort(., decreasing = TRUE)
-  gse <- clusterProfiler::gseGO(geneList = gsea_gene_list_w, 
-                                ont = ont,      # "BP", "MF", "CC"
-                                keyType = keyType, 
-                                nPerm = 10000,
-                                minGSSize = 3, 
-                                maxGSSize = 800, 
-                                verbose = TRUE, 
-                                OrgDb = organism, 
-                                pAdjustMethod = "none")
-  return(gse)
-}
+source("RNAseq_function.R")
 
-runkegg <- function(dir,
-                    kegg_org = "hsa",  # human is "hsa"
-                    keyType = "ncbi-geneid"){
-  df <- readxl::read_xlsx(dir) 
-  gene.df <- bitr(df$ensembl_gene_id, fromType = "ENSEMBL",
-                  toType = c("ENTREZID"),
-                  OrgDb = "org.Hs.eg.db")
-  colnames(gene.df) <- c("ensembl_gene_id","ENTREZID")
-  merged_df <- dplyr::left_join(x = df, y = gene.df)
-  # $csv file's colume namm of log2 fold change
-  kegg_gene_list <- merged_df$log2FC_noi
-  # Name vector with ENTREZ ids
-  names(kegg_gene_list) <- merged_df$ENTREZID
-  # omit any NA values and sort the list in decreasing order
-  kegg_gene_list<- na.omit(kegg_gene_list) %>% 
-    sort(., decreasing = TRUE)
-  # Run KEGG
-  # change KEGG Organism Code from https://www.genome.jp/kegg/catalog/org_list.html 
-  keg <- gseKEGG(geneList     = kegg_gene_list,
-                 organism     = kegg_org,
-                 nPerm        = 10000,
-                 minGSSize    = 3,
-                 maxGSSize    = 800,
-                 pvalueCutoff = 0.05,
-                 pAdjustMethod = "none",
-                 keyType       = keyType)
-  return(keg)
-}
 
-# 工作目錄 ----------------------------------------------------------------
-setwd("/Users/benson/Documents/project/RNA-seq1")
-data_path <- "/Users/benson/Documents/raw_data/RNA-seq1/Y_L_V"
-setwd(data_path)
+# load data ---------------------------------------------------------------
+data_path <- "/Users/benson/Documents/raw_data/RNA-seq1/metal_anno"
 
-# 快速run gsea/kegg --------------------------------------------------------
-gsea_w_bap <- rungsea("_BAP__venn_three_overlap_W_.xlsx")
-gsea_d_bap <- rungsea("_BAP__venn_three_overlap_D_.xlsx")
 
-kegg_w_bap <- runkegg("_BAP__venn_three_overlap_W_.xlsx")
-kegg_d_bap <- runkegg("_BAP__venn_three_overlap_D_.xlsx")
+# use function run GSEA and KEGG ------------------------------------------
+gse <- gsea_run(data_path = data_path,
+                file="ip_Y_V_S_CO_0_deg.xlsx", all_gene = T
+                )
+keg <- kegg_run(data_path=data_path,
+                file = "ip_Y_V_S_CO_0_deg.xlsx", all_gene = T
+                )
+
+
 
 # run GSEA -------------------------------------------------------------------
 df <- readxl::read_xlsx(file.path(data_path, "ip_Y_V_S_CO_0_deg.xlsx"))
@@ -271,12 +224,6 @@ for (kegg_pathway_id in keg_cyp) {
 }
 
 
-# new ---------------------------------------------------------------------
-g <- gse@result
-
-
-k <- keg@result$core_enrichment[1]
-k2 <- str_split(k, "/")
 
 
 
