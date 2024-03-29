@@ -18,7 +18,7 @@ gsea_run <- function(data_path=data_path,
       cat(c(" <- error: check list_id","\n"))
       return(NULL)
     }
-    cat(c(" >- input selected gene and run ORA"))
+    cat(c(" >- input selected gene and run ORA","\n"))
   } 
   
   # set organism for human
