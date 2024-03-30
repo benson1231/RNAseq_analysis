@@ -58,7 +58,7 @@ ComplexHeatmap::Heatmap(mycount_scale, top_annotation = ha, cluster_columns = F,
                         )
 
 # DEG heatmap -----------------------------------------------------------------
-data_path <- "/Users/benson/Documents/raw_data/RNA-seq1/metal_anno/"
+data_path <- "/Users/benson/Documents/raw_data/RNA-seq1/metal_anno"
 # read data
 co <- readxl::read_xlsx(file.path(data_path, "ip_Y_V_S_BAP_0_deg.xlsx"))
 co <- co %>% filter(abs(M)>1)  # select DEG from our criteria
@@ -112,8 +112,7 @@ ComplexHeatmap::Heatmap(mat_scale, top_annotation = ha, cluster_columns = F,
 
 
 # draw heatmap ---------------------------------------------------
-draw_heatmap(data_path = data_path,
-             file = "ip_Y_V_S_BAP_0_deg.xlsx",
+draw_heatmap("ip_Y_V_S_BAP_0_deg.xlsx",
              groups = "CO",
              log_crit = 4)
 
@@ -126,11 +125,11 @@ draw_from_list(list = list,
 # get DEG list ------------------------------------------------------------
 data_path <- "/Users/benson/Documents/raw_data/RNA-seq1/metal_anno"
 
-BAP_down <- get_deg(data_path = data_path,file = "ip_Y_V_S_BAP_0_deg.xlsx",
+BAP_down <- get_deg("ip_Y_V_S_BAP_0_deg.xlsx",
                     log_crit = c(1,-1),dir = "down")
-CO_down <- get_deg(data_path = data_path,file = "ip_Y_V_S_CO_0_deg.xlsx",
+CO_down <- get_deg("ip_Y_V_S_CO_0_deg.xlsx",
                    log_crit = c(1,-1),dir = "down")
-CO_BAP_down <- get_deg(data_path = data_path,file = "ip_Y_V_S_CO_BAP_0_deg.xlsx",
+CO_BAP_down <- get_deg("ip_Y_V_S_CO_BAP_0_deg.xlsx",
                        log_crit = c(1,-1),dir = "down")
 
 draw_from_list(list = CO_down,groups = "CO",id = "ENSEMBL")
@@ -237,4 +236,26 @@ p3 <- draw_from_list(list = meso,groups = "ALL",
                      id = "SYMBOL",title ="mesoderm",anno = F)
 p4 <- draw_from_list(list = pluri,groups = "ALL",
                      id = "SYMBOL",title ="pluripotency",anno = F)
+p1 %v% p2 %v% p3 %v% p4
+
+
+p1 <- draw_from_list(list = ecto_list1,groups = "ALL",
+                     id = "SYMBOL",title ="ectoderm", show_row_names = F)
+p2 <- draw_from_list(list = endo_list1,groups = "ALL",
+                     id = "SYMBOL",title ="endoderm",anno = F,show_row_names = F)
+p3 <- draw_from_list(list = meso_list1,groups = "ALL",
+                     id = "SYMBOL",title ="mesoderm",anno = F,show_row_names = F)
+p4 <- draw_from_list(list = pluri_list1,groups = "ALL",
+                     id = "SYMBOL",title ="pluripotency",anno = F,show_row_names = F)
+p1 %v% p2 %v% p3 %v% p4
+
+
+p1 <- draw_from_list(list = ecto_list2,groups = "ALL",
+                     id = "SYMBOL",title ="ectoderm", show_row_names = F)
+p2 <- draw_from_list(list = endo_list2,groups = "ALL",
+                     id = "SYMBOL",title ="endoderm",anno = F,show_row_names = F)
+p3 <- draw_from_list(list = meso_list2,groups = "ALL",
+                     id = "SYMBOL",title ="mesoderm",anno = F,show_row_names = F)
+p4 <- draw_from_list(list = pluri_list2,groups = "ALL",
+                     id = "SYMBOL",title ="pluripotency",anno = F,show_row_names = F)
 p1 %v% p2 %v% p3 %v% p4
