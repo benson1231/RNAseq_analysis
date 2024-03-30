@@ -1,11 +1,11 @@
 # function for visualization of RNA-seq data 
 # draw_heatmap ------------------------------------------------------------
-draw_heatmap <- function(data_path=data_path,
-                         file=file,
+draw_heatmap <- function(file=file,
                          log_crit=3,
                          groups=groups,
                          show_row_names = TRUE
-){
+                         ){
+  cat(c(" -> load data from",file.path(data_path, file),"\n"))
   data <- readxl::read_xlsx(file.path(data_path, file)) # 讀檔
   data <- data %>% filter(abs(M)>log_crit)  # filter log2FC criteria
   list <- data$ENSEMBL  # 抓出差異ensembl id
@@ -37,10 +37,10 @@ draw_heatmap <- function(data_path=data_path,
     return(NULL)
   }
   
-  cat(c("<- filtering data", "\n"))
+  cat(c(" -> filtering data", "\n"))
   
   mat_scale <- data_mat %>% t() %>% scale(scale = T) %>% t() %>% as.matrix() %>% na.omit()
-  cat(c("<- annotation", "\n"))
+  cat(c(" -> annotation", "\n"))
   
   col <- colnames(mat_scale)
   
@@ -64,7 +64,7 @@ draw_heatmap <- function(data_path=data_path,
                                              'LCD_BAP'= '#0000E3', "HCD_BAP"="#000079"),
                                      clone=c('WT'="#FF2D2D",'L858R'="#FF9224",
                                              "DEL19"= "#66B3FF","YAP"="#2828FF")))
-  cat(c("<- drawing heatmap", "\n"))
+  cat(c(" -> drawing heatmap", "\n"))
   
   ComplexHeatmap::Heatmap(mat_scale, top_annotation = ha, cluster_columns = F, 
                           show_row_names = show_row_names, 
@@ -126,10 +126,10 @@ draw_from_list <- function(list,
     cat(c("<- please type in groups", "\n"))
     reture(NULL)
   }
-  cat(c("<- filtering data", "\n"))
+  cat(c(" -> filtering data", "\n"))
   
   mat_scale <- data_mat %>% t() %>% scale() %>% t() %>% as.matrix() %>% na.omit()
-  cat(c("<- annotation", "\n"))
+  cat(c(" -> annotation", "\n"))
   
   col <- colnames(mat_scale)
   
@@ -153,7 +153,7 @@ draw_from_list <- function(list,
                                              'LCD_BAP'= '#0000E3', "HCD_BAP"="#000079"),
                                      clone=c('WT'="#FF2D2D",'L858R'="#FF9224",
                                              "DEL19"= "#66B3FF","YAP"="#2828FF")))
-  cat(c("<- drawing heatmap", "\n"))
+  cat(c(" -> drawing heatmap", "\n"))
   
   if(anno==T){
     ComplexHeatmap::Heatmap(mat_scale, top_annotation = ha, cluster_columns = F, 
@@ -172,11 +172,12 @@ draw_from_list <- function(list,
 }
 
 # get_deg --------------------------------------------------------
-get_deg <- function(data_path=data_path,
-                    file=file,
+get_deg <- function(file=file,
                     log_crit = c(1,-1),
                     dir="all"  # all/up/down
+                    
 ){
+  cat(c(" -> load data from",file.path(data_path, file),"\n"))
   data <- readxl::read_xlsx(file.path(data_path, file)) # 讀檔
   if(dir=="all"){
     data <- data %>% filter(M >log_crit[1]| M < log_crit[2])
@@ -193,12 +194,12 @@ get_deg <- function(data_path=data_path,
 }
 
 # gsea_run ----------------------------------------------------------------
-gsea_run <- function(data_path=data_path,
-                     file,
+gsea_run <- function(file,
                      all_gene=FALSE, 
                      list,
                      list_id="ensembl"   # ensembl/symbol
                      ){
+  cat(c(" -> load data from",file.path(data_path, file),"\n"))
   if(all_gene==TRUE){
     df <- readxl::read_xlsx(file.path(data_path, file))
     cat(c(" >- input all gene and run GSEA","\n"))
@@ -213,7 +214,7 @@ gsea_run <- function(data_path=data_path,
       cat(c(" <- error: check list_id","\n"))
       return(NULL)
     }
-    cat(c(" >- input selected gene and run ORA","\n"))
+    cat(c(" -> input selected gene and run ORA","\n"))
   } 
   
   # set organism for human
@@ -229,7 +230,7 @@ gsea_run <- function(data_path=data_path,
     sort(., decreasing = TRUE)
   cat(c(" -> length of the gene list is",length(gsea_gene_list),"\n"))
   #run GSEA
-  cat(c(" -> running KEGG", "\n"))
+  cat(c(" -> running GSEA", "\n"))
   gse <- gseGO(geneList = gsea_gene_list, 
                ont ="ALL", 
                keyType = "ENSEMBL", 
@@ -245,13 +246,13 @@ gsea_run <- function(data_path=data_path,
 
 
 # kegg_run ----------------------------------------------------------------
-kegg_run <- function(data_path=data_path,
-                     file,
+kegg_run <- function(file,
                      all_gene=FALSE,
                      list,
                      list_id="ensembl"   # ensembl/symbol
-){
+                     ){
   # select gene in list
+  cat(c(" -> load data from",file.path(data_path, file),"\n"))
   if(all_gene==TRUE){
     df <- readxl::read_xlsx(file.path(data_path, file))
     cat(c(" >- input all gene and run KEGG","\n"))
