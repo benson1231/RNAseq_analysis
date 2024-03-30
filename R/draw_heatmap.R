@@ -1,9 +1,9 @@
-### function
-draw_heatmap <- function(data_path=data_path,
-                         file=file,
+draw_heatmap <- function(file=file,
                          log_crit=3,
-                         groups=groups
+                         groups=groups,
+                         show_row_names = TRUE
                          ){
+  cat(c(" -> load data from",file.path(data_path, file),"\n"))
   data <- readxl::read_xlsx(file.path(data_path, file)) # 讀檔
   data <- data %>% filter(abs(M)>log_crit)  # filter log2FC criteria
   list <- data$ENSEMBL  # 抓出差異ensembl id
@@ -14,7 +14,7 @@ draw_heatmap <- function(data_path=data_path,
     left_join(.,gene_df, by="ENSEMBL") %>% group_by(SYMBOL) %>%
     summarize(across(where(is.numeric), sum)) %>% 
     column_to_rownames(., var = "SYMBOL")
-
+  
   if(groups == "AS"){
     data_mat <- mat %>% select(ip_Y_V_S_CON,ip_Y_V_S_DMS,ip_Y_V_S_AS,ip_Y_V_S_BAP,ip_Y_V_S_AS_BAP)
   } else if(groups == "CO"){
@@ -25,14 +25,20 @@ draw_heatmap <- function(data_path=data_path,
   } else if(groups == "BAP"){
     data_mat <- mat %>% select(ip_Y_V_S_CON,ip_Y_V_S_DMS,ip_Y_V_S_BAP,ip_Y_V_S_AS_BAP
                                ,ip_Y_V_S_CO_BAP,ip_Y_V_S_LCD_BAP,ip_Y_V_S_HCD_BAP)
+  } else if(groups == "ALL"){
+    data_mat <- mat %>% select(ip_Y_V_S_CON,ip_Y_V_S_DMS,ip_Y_V_S_AZA,ip_Y_V_S_DAC,
+                               ip_Y_V_S_AS,ip_Y_V_S_CO,
+                               ip_Y_V_S_LCD,ip_Y_V_S_HCD,ip_Y_V_S_BAP,ip_Y_V_S_AS_BAP,
+                               ip_Y_V_S_CO_BAP,ip_Y_V_S_LCD_BAP,ip_Y_V_S_HCD_BAP)
   } else{
     cat(c("<- please type in groups", "\n"))
-    break
+    return(NULL)
   }
-  cat(c("<- filtering data", "\n"))
+  
+  cat(c(" -> filtering data", "\n"))
   
   mat_scale <- data_mat %>% t() %>% scale(scale = T) %>% t() %>% as.matrix() %>% na.omit()
-  cat(c("<- annotation", "\n"))
+  cat(c(" -> annotation", "\n"))
   
   col <- colnames(mat_scale)
   
@@ -56,14 +62,12 @@ draw_heatmap <- function(data_path=data_path,
                                              'LCD_BAP'= '#0000E3', "HCD_BAP"="#000079"),
                                      clone=c('WT'="#FF2D2D",'L858R'="#FF9224",
                                              "DEL19"= "#66B3FF","YAP"="#2828FF")))
-  cat(c("<- drawing heatmap", "\n"))
+  cat(c(" -> drawing heatmap", "\n"))
   
   ComplexHeatmap::Heatmap(mat_scale, top_annotation = ha, cluster_columns = F, 
-                          show_row_names = T, show_column_names = F,
+                          show_row_names = show_row_names, 
+                          show_column_names = F,
                           name = "Z-score"
   )
   
 }
-
-### use function
-draw_heatmap(data_path = data_path ,file = "ip_Y_V_S_BAP_0_deg.xlsx",groups = "CO",log_crit = 4)
