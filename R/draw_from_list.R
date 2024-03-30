@@ -3,7 +3,8 @@ draw_from_list <- function(list,
                            id="ENSEMBL",
                            cluster=TRUE,
                            anno=TRUE,
-                           title# ENSEMBL/SYMBOL
+                           title="",
+                           show_row_names = TRUE# ENSEMBL/SYMBOL
 ){
   if(id=="ENSEMBL"){
     list <- list  
@@ -26,7 +27,7 @@ draw_from_list <- function(list,
       filter(.,rownames(new_df) %in% list)
   }else{
     cat(c("<- error, check gene id", "\n"))
-    break
+    return(NULL)
   }
   
   if(groups == "AS"){
@@ -46,12 +47,12 @@ draw_from_list <- function(list,
                                ip_Y_V_S_CO_BAP,ip_Y_V_S_LCD_BAP,ip_Y_V_S_HCD_BAP)
   } else{
     cat(c("<- please type in groups", "\n"))
-    break
+    reture(NULL)
   }
-  cat(c("<- filtering data", "\n"))
+  cat(c(" -> filtering data", "\n"))
   
   mat_scale <- data_mat %>% t() %>% scale() %>% t() %>% as.matrix() %>% na.omit()
-  cat(c("<- annotation", "\n"))
+  cat(c(" -> annotation", "\n"))
   
   col <- colnames(mat_scale)
   
@@ -75,19 +76,20 @@ draw_from_list <- function(list,
                                              'LCD_BAP'= '#0000E3', "HCD_BAP"="#000079"),
                                      clone=c('WT'="#FF2D2D",'L858R'="#FF9224",
                                              "DEL19"= "#66B3FF","YAP"="#2828FF")))
-  cat(c("<- drawing heatmap", "\n"))
+  cat(c(" -> drawing heatmap", "\n"))
   
   if(anno==T){
     ComplexHeatmap::Heatmap(mat_scale, top_annotation = ha, cluster_columns = F, 
-                            show_row_names = T, show_column_names = F,cluster_rows = cluster,
+                            show_row_names = show_row_names,
+                            show_column_names = F,cluster_rows = cluster,
                             name = "Z-score", row_title = title
-                            )
+    )
   }else{
     ComplexHeatmap::Heatmap(mat_scale, cluster_columns = F, 
-                            show_row_names = T, show_column_names = F,cluster_rows = cluster,
+                            show_row_names = show_row_names, 
+                            show_column_names = F,
+                            cluster_rows = cluster,
                             name = "Z-score", row_title = title
-                            )
+    )
   }
-  
-  
 }
