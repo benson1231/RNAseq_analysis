@@ -1,9 +1,9 @@
-gsea_run <- function(data_path=data_path,
-                     file,
+gsea_run <- function(file,
                      all_gene=FALSE, 
                      list,
                      list_id="ensembl"   # ensembl/symbol
                      ){
+  cat(c(" -> load data from",file.path(data_path, file),"\n"))
   if(all_gene==TRUE){
     df <- readxl::read_xlsx(file.path(data_path, file))
     cat(c(" >- input all gene and run GSEA","\n"))
@@ -18,7 +18,7 @@ gsea_run <- function(data_path=data_path,
       cat(c(" <- error: check list_id","\n"))
       return(NULL)
     }
-    cat(c(" >- input selected gene and run ORA","\n"))
+    cat(c(" -> input selected gene and run ORA","\n"))
   } 
   
   # set organism for human
@@ -34,7 +34,7 @@ gsea_run <- function(data_path=data_path,
     sort(., decreasing = TRUE)
   cat(c(" -> length of the gene list is",length(gsea_gene_list),"\n"))
   #run GSEA
-  cat(c(" -> running KEGG", "\n"))
+  cat(c(" -> running GSEA", "\n"))
   gse <- gseGO(geneList = gsea_gene_list, 
                ont ="ALL", 
                keyType = "ENSEMBL", 
