@@ -1,10 +1,10 @@
-kegg_run <- function(data_path=data_path,
-                     file,
+kegg_run <- function(file,
                      all_gene=FALSE,
                      list,
                      list_id="ensembl"   # ensembl/symbol
-){
+                     ){
   # select gene in list
+  cat(c(" -> load data from",file.path(data_path, file),"\n"))
   if(all_gene==TRUE){
     df <- readxl::read_xlsx(file.path(data_path, file))
     cat(c(" >- input all gene and run KEGG","\n"))
@@ -46,4 +46,3 @@ kegg_run <- function(data_path=data_path,
                   keyType       = "ncbi-geneid")
   return(kegg)
 }
-
