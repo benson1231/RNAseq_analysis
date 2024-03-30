@@ -13,44 +13,26 @@ source("RNAseq_function.R")
 data_path <- "/Users/benson/Documents/raw_data/RNA-seq1/metal_anno"
 
 # use function to run GSEA ----------------------------------------------
-gse <- gsea_run(data_path = data_path,
-                   file="ip_Y_V_S_AS_0_deg.xlsx", all_gene = T)
-gse <- gsea_run(data_path = data_path,
-                file="ip_Y_V_S_CO_0_deg.xlsx", all_gene = T)
-gse <- gsea_run(data_path = data_path,
-                   file="ip_Y_V_S_LCD_0_deg.xlsx", all_gene = T)
-gse<- gsea_run(data_path = data_path,
-                   file="ip_Y_V_S_HCD_0_deg.xlsx", all_gene = T)
-gse <- gsea_run(data_path = data_path,
-                   file="ip_Y_V_S_BAP_0_deg.xlsx", all_gene = T)
-gse <- gsea_run(data_path = data_path,
-                   file="ip_Y_V_S_AS_BAP_0_deg.xlsx", all_gene = T)
-gse <- gsea_run(data_path = data_path,
-                   file="ip_Y_V_S_CO_BAP_0_deg.xlsx", all_gene = T)
-gse <- gsea_run(data_path = data_path,
-                   file="ip_Y_V_S_LCD_BAP_0_deg.xlsx", all_gene = T)
-gse <- gsea_run(data_path = data_path,
-                   file="ip_Y_V_S_HCD_BAP_0_deg.xlsx", all_gene = T)
+gse <- gsea_run("ip_Y_V_S_AS_0_deg.xlsx", all_gene = T)
+gse <- gsea_run("ip_Y_V_S_CO_0_deg.xlsx", all_gene = T)
+gse <- gsea_run("ip_Y_V_S_LCD_0_deg.xlsx", all_gene = T)
+gse<- gsea_run("ip_Y_V_S_HCD_0_deg.xlsx", all_gene = T)
+gse <- gsea_run("ip_Y_V_S_BAP_0_deg.xlsx", all_gene = T)
+gse <- gsea_run("ip_Y_V_S_AS_BAP_0_deg.xlsx", all_gene = T)
+gse <- gsea_run("ip_Y_V_S_CO_BAP_0_deg.xlsx", all_gene = T)
+gse <- gsea_run("ip_Y_V_S_LCD_BAP_0_deg.xlsx", all_gene = T)
+gse <- gsea_run("ip_Y_V_S_HCD_BAP_0_deg.xlsx", all_gene = T)
 
 # use function to run KEGG ------------------------------------------------
-keg <- kegg_run(data_path = data_path,
-                   file="ip_Y_V_S_AS_0_deg.xlsx", all_gene = T)
-keg <- kegg_run(data_path = data_path,
-                   file="ip_Y_V_S_CO_0_deg.xlsx", all_gene = T)
-keg <- kegg_run(data_path = data_path,
-                    file="ip_Y_V_S_LCD_0_deg.xlsx", all_gene = T)
-keg <- kegg_run(data_path = data_path,
-                    file="ip_Y_V_S_HCD_0_deg.xlsx", all_gene = T)
-keg <- kegg_run(data_path = data_path,
-                    file="ip_Y_V_S_BAP_0_deg.xlsx", all_gene = T)
-keg <- kegg_run(data_path = data_path,
-                       file="ip_Y_V_S_AS_BAP_0_deg.xlsx", all_gene = T)
-keg <- kegg_run(data_path = data_path,
-                       file="ip_Y_V_S_CO_BAP_0_deg.xlsx", all_gene = T)
-keg <- kegg_run(data_path = data_path,
-                        file="ip_Y_V_S_LCD_BAP_0_deg.xlsx", all_gene = T)
-keg <- kegg_run(data_path = data_path,
-                        file="ip_Y_V_S_HCD_BAP_0_deg.xlsx", all_gene = T)
+keg <- kegg_run("ip_Y_V_S_AS_0_deg.xlsx", all_gene = T)
+keg <- kegg_run("ip_Y_V_S_CO_0_deg.xlsx", all_gene = T)
+keg <- kegg_run("ip_Y_V_S_LCD_0_deg.xlsx", all_gene = T)
+keg <- kegg_run("ip_Y_V_S_HCD_0_deg.xlsx", all_gene = T)
+keg <- kegg_run("ip_Y_V_S_BAP_0_deg.xlsx", all_gene = T)
+keg <- kegg_run("ip_Y_V_S_AS_BAP_0_deg.xlsx", all_gene = T)
+keg <- kegg_run("ip_Y_V_S_CO_BAP_0_deg.xlsx", all_gene = T)
+keg <- kegg_run("ip_Y_V_S_LCD_BAP_0_deg.xlsx", all_gene = T)
+keg <- kegg_run("ip_Y_V_S_HCD_BAP_0_deg.xlsx", all_gene = T)
 
 # GSEA plots --------------------------------------------------------------
 # dot plot(gse)
