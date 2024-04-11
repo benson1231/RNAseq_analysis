@@ -8,6 +8,8 @@ draw_heatmap <- function(file=file,
   cat(c(" -> load data from",file.path(data_path, file),"\n"))
   data <- readxl::read_xlsx(file.path(data_path, file)) # 讀檔
   data <- data %>% filter(abs(M)>log_crit)  # filter log2FC criteria
+  cat(c(" -> log2FC criteria is", log_crit,"\n"))
+  
   list <- data$ENSEMBL  # 抓出差異ensembl id
   gene_df <- data[,c("ENSEMBL","SYMBOL")] # 
   mycount_df$ENSEMBL <- rownames(mycount_df)
@@ -17,6 +19,8 @@ draw_heatmap <- function(file=file,
     summarize(across(where(is.numeric), sum)) %>% 
     column_to_rownames(., var = "SYMBOL")
   
+  # select groups
+  cat(c(" -> filtering data", "\n"))
   if(groups == "AS"){
     data_mat <- mat %>% select(ip_Y_V_S_CON,ip_Y_V_S_DMS,ip_Y_V_S_AS,ip_Y_V_S_BAP,ip_Y_V_S_AS_BAP)
   } else if(groups == "CO"){
@@ -33,15 +37,14 @@ draw_heatmap <- function(file=file,
                                ip_Y_V_S_LCD,ip_Y_V_S_HCD,ip_Y_V_S_BAP,ip_Y_V_S_AS_BAP,
                                ip_Y_V_S_CO_BAP,ip_Y_V_S_LCD_BAP,ip_Y_V_S_HCD_BAP)
   } else{
-    cat(c("<- please type in groups", "\n"))
+    cat(c("<- check groups", "\n"))
     return(NULL)
   }
   
-  cat(c(" -> filtering data", "\n"))
-  
   mat_scale <- data_mat %>% t() %>% scale(scale = T) %>% t() %>% as.matrix() %>% na.omit()
-  cat(c(" -> annotation", "\n"))
+  cat(c(" -> scaling", "\n"))
   
+  ### heat-map argument
   col <- colnames(mat_scale)
   
   # agent name
@@ -82,7 +85,8 @@ draw_from_list <- function(list,
                            anno=TRUE,
                            title="",
                            show_row_names = TRUE# ENSEMBL/SYMBOL
-){
+                           ){
+  cat(c(" -> input list with",length(list),"genes","\n"))
   if(id=="ENSEMBL"){
     list <- list  
     mycount_df$ENSEMBL <- rownames(mycount_df)
@@ -103,10 +107,12 @@ draw_from_list <- function(list,
     mat <- new_df %>% 
       filter(.,rownames(new_df) %in% list)
   }else{
-    cat(c("<- error, check gene id", "\n"))
+    cat(c("<- error: check gene id", "\n"))
     return(NULL)
   }
   
+  # select groups
+  cat(c(" -> filtering data", "\n"))
   if(groups == "AS"){
     data_mat <- mat %>% select(ip_Y_V_S_CON,ip_Y_V_S_DMS,ip_Y_V_S_AS,ip_Y_V_S_BAP,ip_Y_V_S_AS_BAP)
   } else if(groups == "CO"){
@@ -126,11 +132,12 @@ draw_from_list <- function(list,
     cat(c("<- please type in groups", "\n"))
     reture(NULL)
   }
-  cat(c(" -> filtering data", "\n"))
   
+  # scaling
+  cat(c(" -> scaling data", "\n"))
   mat_scale <- data_mat %>% t() %>% scale() %>% t() %>% as.matrix() %>% na.omit()
-  cat(c(" -> annotation", "\n"))
   
+  # heat-map argument
   col <- colnames(mat_scale)
   
   # agent name
@@ -179,12 +186,17 @@ get_deg <- function(file=file,
 ){
   cat(c(" -> load data from",file.path(data_path, file),"\n"))
   data <- readxl::read_xlsx(file.path(data_path, file)) # 讀檔
+  
+  # filter log2FC criteria
   if(dir=="all"){
     data <- data %>% filter(M >log_crit[1]| M < log_crit[2])
+    cat(c(" -> abs(log2FC) larger than", log_crit[1],"\n"))
   }else if(dir=="up"){
     data <- data %>% filter(M > log_crit[1])
+    cat(c(" -> log2FC larger than", log_crit[1],"\n"))
   }else if(dir=="down"){
     data <- data %>% filter(M < log_crit[2])
+    cat(c(" -> log2FC smaller than", log_crit[2],"\n"))
   }else{
     cat(c("<- error, check direction", "\n"))
     return(NULL)
@@ -197,7 +209,8 @@ get_deg <- function(file=file,
 gsea_run <- function(file,
                      all_gene=FALSE, 
                      list,
-                     list_id="ensembl"   # ensembl/symbol
+                     list_id="ensembl",   # ensembl/symbol
+                     gsea_term="ALL"  # "BP","MF","CC"
                      ){
   cat(c(" -> load data from",file.path(data_path, file),"\n"))
   if(all_gene==TRUE){
@@ -230,9 +243,9 @@ gsea_run <- function(file,
     sort(., decreasing = TRUE)
   cat(c(" -> length of the gene list is",length(gsea_gene_list),"\n"))
   #run GSEA
-  cat(c(" -> running GSEA", "\n"))
+  cat(c(" -> running GSEA in", gsea_term ,"GSEA-term\n"))
   gse <- gseGO(geneList = gsea_gene_list, 
-               ont ="ALL", 
+               ont = gsea_term, 
                keyType = "ENSEMBL", 
                nPerm = 10000, 
                minGSSize = 3, 
@@ -294,4 +307,36 @@ kegg_run <- function(file,
                   keyType       = "ncbi-geneid")
   return(kegg)
 }
+
+# create_enrich_list ------------------------------------------------------
+create_enrich_list <- function(file_name, type = "ENTREZID") {
+  # 檢查 type 是否有效
+  if (!(type %in% c("ENTREZID", "ENSEMBL"))) {
+    stop("Invalid type. Allowed values are 'ENTREZID' or 'ENSEMBL'.")
+  }
+  # 讀取資料
+  raw_df <- readxl::read_xlsx(file.path(data_path, file_name)) %>% as.data.frame()
+  
+  # 根據不同的類型選擇相應的欄位名稱
+  if (type == "ENTREZID") {
+    id_col <- "ENTREZID"
+  } else {
+    id_col <- "ENSEMBL"
+  }
+  
+  # 處理資料
+  df <- raw_df %>%
+    select(all_of(id_col), M) %>%
+    group_by(across(all_of(id_col))) %>%
+    summarize(across(where(is.numeric), mean)) %>%
+    arrange(desc(M)) 
+  
+  # 創建列表
+  enrich_list <- df$M 
+  names(enrich_list) <- df[[id_col]]
+  enrich_list <-  na.omit(enrich_list)
+  
+  return(enrich_list)
+}
+
 
