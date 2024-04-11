@@ -87,8 +87,14 @@ for(i in 1:3){
          height = 12, width = 12, units = "in")
 }
 
-viewPathway("Xenobiotics", readable = TRUE, foldChange = list) +
-  scale_color_gradientn(name = "fold change", colors=colors, na.value = "#E5C494")
+viewPathway("Cellular response to chemical stress", 
+            readable = TRUE, foldChange = list
+            ) +
+  scale_color_gradientn(name = "fold change", 
+                        colors=colors, 
+                        na.value = "#E5C494",
+                        limits = c(-2, 2)
+                        )  # 將顏色範圍限制在-2到2之間
 
 ggsave("Xenobiotics.png", 
        height = 12, width = 12, units = "in")
