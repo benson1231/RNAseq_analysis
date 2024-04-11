@@ -212,6 +212,10 @@ gsea_run <- function(file,
                      list_id="ensembl",   # ensembl/symbol
                      gsea_term="ALL"  # "BP","MF","CC"
                      ){
+  # 檢查 type 是否有效
+  if (!(list_id %in% c("ensembl", "symbol"))) {
+    stop("Invalid type. Allowed values are 'ensembl' or 'symbol'")
+  }
   cat(c(" -> load data from",file.path(data_path, file),"\n"))
   if(all_gene==TRUE){
     df <- readxl::read_xlsx(file.path(data_path, file))
@@ -220,13 +224,10 @@ gsea_run <- function(file,
     if(list_id=="ensembl"){
       df <- readxl::read_xlsx(file.path(data_path, file)) %>% 
         filter(ENSEMBL %in% list)
-    } else if(list_id=="symbol"){
+    } else {
       df <- readxl::read_xlsx(file.path(data_path, file)) %>% 
         filter(SYMBOL %in% list)
-    } else{
-      cat(c(" <- error: check list_id","\n"))
-      return(NULL)
-    }
+    } 
     cat(c(" -> input selected gene and run ORA","\n"))
   } 
   
@@ -264,6 +265,10 @@ kegg_run <- function(file,
                      list,
                      list_id="ensembl"   # ensembl/symbol
                      ){
+  # 檢查 type 是否有效
+  if (!(list_id %in% c("ensembl", "symbol"))) {
+    stop("Invalid type. Allowed values are 'ensembl' or 'symbol'")
+  }
   # select gene in list
   cat(c(" -> load data from",file.path(data_path, file),"\n"))
   if(all_gene==TRUE){
@@ -273,13 +278,10 @@ kegg_run <- function(file,
     if(list_id=="ensembl"){
       df <- readxl::read_xlsx(file.path(data_path, file)) %>% 
         filter(ENSEMBL %in% list)
-    } else if(list_id=="symbol"){
+    } else {
       df <- readxl::read_xlsx(file.path(data_path, file)) %>% 
         filter(SYMBOL %in% list)
-    } else{
-      cat(c(" <- error: check list_id","\n"))
-      return(NULL)
-    }
+    } 
     cat(c(" >- input selected gene and run ORA","\n"))
   } 
   
