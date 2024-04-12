@@ -1,11 +1,12 @@
 draw_from_list <- function(list,
-                           groups=groups,
+                           groups="ALL",
                            id="ENSEMBL",
                            cluster=TRUE,
                            anno=TRUE,
                            title="",
                            show_row_names = TRUE# ENSEMBL/SYMBOL
-){
+                           ){
+  cat(c(" -> input list with",length(list),"genes","\n"))
   if(id=="ENSEMBL"){
     list <- list  
     mycount_df$ENSEMBL <- rownames(mycount_df)
@@ -26,10 +27,12 @@ draw_from_list <- function(list,
     mat <- new_df %>% 
       filter(.,rownames(new_df) %in% list)
   }else{
-    cat(c("<- error, check gene id", "\n"))
+    cat(c("<- error: check gene id", "\n"))
     return(NULL)
   }
   
+  # select groups
+  cat(c(" -> filtering data", "\n"))
   if(groups == "AS"){
     data_mat <- mat %>% select(ip_Y_V_S_CON,ip_Y_V_S_DMS,ip_Y_V_S_AS,ip_Y_V_S_BAP,ip_Y_V_S_AS_BAP)
   } else if(groups == "CO"){
@@ -49,11 +52,12 @@ draw_from_list <- function(list,
     cat(c("<- please type in groups", "\n"))
     reture(NULL)
   }
-  cat(c(" -> filtering data", "\n"))
   
+  # scaling
+  cat(c(" -> scaling data", "\n"))
   mat_scale <- data_mat %>% t() %>% scale() %>% t() %>% as.matrix() %>% na.omit()
-  cat(c(" -> annotation", "\n"))
   
+  # heat-map argument
   col <- colnames(mat_scale)
   
   # agent name
