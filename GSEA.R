@@ -10,29 +10,29 @@ library(DOSE)
 source("RNAseq_function.R")
 
 # load data ---------------------------------------------------------------
-data_path <- "/Users/benson/Documents/raw_data/RNA-seq1/metal_anno"
+data_path <- "/Users/benson/Documents/raw_data/RNA-seq1-3/V"
 
 # use function to run GSEA ----------------------------------------------
-gse <- gsea_run("ip_Y_V_S_AS_0_deg.xlsx", all_gene = T)
-gse <- gsea_run("ip_Y_V_S_CO_0_deg.xlsx", all_gene = T)
-gse <- gsea_run("ip_Y_V_S_LCD_0_deg.xlsx", all_gene = T)
-gse<- gsea_run("ip_Y_V_S_HCD_0_deg.xlsx", all_gene = T)
-gse <- gsea_run("ip_Y_V_S_BAP_0_deg.xlsx", all_gene = T)
-gse <- gsea_run("ip_Y_V_S_AS_BAP_0_deg.xlsx", all_gene = T)
-gse <- gsea_run("ip_Y_V_S_CO_BAP_0_deg.xlsx", all_gene = T)
-gse <- gsea_run("ip_Y_V_S_LCD_BAP_0_deg.xlsx", all_gene = T)
-gse <- gsea_run("ip_Y_V_S_HCD_BAP_0_deg.xlsx", all_gene = T)
+gse <- gsea_run("ip_Y_V_S_AS_0_deg.xlsx")
+gse <- gsea_run("ip_Y_V_S_CO_0_deg.xlsx")
+gse <- gsea_run("ip_Y_V_S_LCD_0_deg.xlsx")
+gse<- gsea_run("ip_Y_V_S_HCD_0_deg.xlsx")
+gse <- gsea_run("ip_Y_V_S_BAP_0_deg.xlsx")
+gse <- gsea_run("ip_Y_V_S_AS_BAP_0_deg.xlsx")
+gse <- gsea_run("ip_Y_V_S_CO_BAP_0_deg.xlsx")
+gse <- gsea_run("ip_Y_V_S_LCD_BAP_0_deg.xlsx")
+gse <- gsea_run("ip_Y_V_S_HCD_BAP_0_deg.xlsx")
 
 # use function to run KEGG ------------------------------------------------
-keg <- kegg_run("ip_Y_V_S_AS_0_deg.xlsx", all_gene = T)
-keg <- kegg_run("ip_Y_V_S_CO_0_deg.xlsx", all_gene = T)
-keg <- kegg_run("ip_Y_V_S_LCD_0_deg.xlsx", all_gene = T)
-keg <- kegg_run("ip_Y_V_S_HCD_0_deg.xlsx", all_gene = T)
-keg <- kegg_run("ip_Y_V_S_BAP_0_deg.xlsx", all_gene = T)
-keg <- kegg_run("ip_Y_V_S_AS_BAP_0_deg.xlsx", all_gene = T)
-keg <- kegg_run("ip_Y_V_S_CO_BAP_0_deg.xlsx", all_gene = T)
-keg <- kegg_run("ip_Y_V_S_LCD_BAP_0_deg.xlsx", all_gene = T)
-keg <- kegg_run("ip_Y_V_S_HCD_BAP_0_deg.xlsx", all_gene = T)
+keg <- kegg_run("ip_Y_V_S_AS_0_deg.xlsx")
+keg <- kegg_run("ip_Y_V_S_CO_0_deg.xlsx")
+keg <- kegg_run("ip_Y_V_S_LCD_0_deg.xlsx")
+keg <- kegg_run("ip_Y_V_S_HCD_0_deg.xlsx")
+keg <- kegg_run("ip_Y_V_S_BAP_0_deg.xlsx")
+keg <- kegg_run("ip_Y_V_S_AS_BAP_0_deg.xlsx")
+keg <- kegg_run("ip_Y_V_S_CO_BAP_0_deg.xlsx")
+keg <- kegg_run("ip_Y_V_S_LCD_BAP_0_deg.xlsx")
+keg <- kegg_run("ip_Y_V_S_HCD_BAP_0_deg.xlsx")
 
 # GSEA plots --------------------------------------------------------------
 # dot plot(gse)
