@@ -6,12 +6,12 @@ library(ggVennDiagram)
 source("RNAseq_function.R")
 
 # load annotation data ----------------------------------------------------
-gene_df <- "/Users/benson/Documents/project/RNA-seq1/gene_df.RDS" %>% 
+gene_df <- "/Users/benson/Documents/project/RNA-seq1-3/gene_df.RDS" %>% 
   readRDS() %>%
   select(ENSEMBL,SYMBOL)
 
 # load raw reads counts ---------------------------------------------------------------
-raw_counts_df <- read.csv("/Users/benson/Documents/raw_data/RNA-seq1/mycounts_f.txt")
+raw_counts_df <- read.csv("/Users/benson/Documents/raw_data/RNA-seq1-3/mycounts_total_f.csv")
 
 # rearrange the order of columns in raw count data
 mycount_df <- raw_counts_df %>% 
@@ -58,9 +58,9 @@ ComplexHeatmap::Heatmap(mycount_scale, top_annotation = ha, cluster_columns = F,
                         )
 
 # DEG heatmap -----------------------------------------------------------------
-data_path <- "/Users/benson/Documents/raw_data/RNA-seq1/metal_anno"
+data_path <- "/Users/benson/Documents/raw_data/RNA-seq1-3/V"
 # read data
-co <- readxl::read_xlsx(file.path(data_path, "ip_Y_V_S_BAP_0_deg.xlsx"))
+co <- readxl::read_xlsx(file.path(data_path, "ip_Y_V_S_CO_0_deg.xlsx"))
 co <- co %>% filter(abs(M)>1)  # select DEG from our criteria
 deg_list <- co$ENSEMBL  # select DEG ensembl id
 # matching raw count data and filtered ensembl id
@@ -112,19 +112,18 @@ ComplexHeatmap::Heatmap(mat_scale, top_annotation = ha, cluster_columns = F,
 
 
 # draw heatmap ---------------------------------------------------
-draw_heatmap("ip_Y_V_S_BAP_0_deg.xlsx",
+data_path <- "/Users/benson/Documents/raw_data/RNA-seq1-3/V"
+draw_heatmap("ip_Y_V_S_CO_0_deg.xlsx",
              groups = "CO",
              log_crit = 4)
 
 # draw heatmap form a list ------------------------------------------------
-list <- c("CYP1A1","CYP1B1","GADD45B")
+list <- c("CYP1A1","CYP1B1","GADD45B","CDKN1B","ATR")
 draw_from_list(list = list,
                groups = "ALL",
                id = "SYMBOL")
 
 # get DEG list ------------------------------------------------------------
-data_path <- "/Users/benson/Documents/raw_data/RNA-seq1/metal_anno"
-
 BAP_down <- get_deg("ip_Y_V_S_BAP_0_deg.xlsx",
                     log_crit = c(1,-1),dir = "down")
 CO_down <- get_deg("ip_Y_V_S_CO_0_deg.xlsx",
@@ -143,6 +142,7 @@ ggVennDiagram(CO_gene,label_percent_digit = 1,label_alpha = 0) +
   scale_fill_gradient(low="white",high = "#FF2D2D")
 ggVennDiagram(CO_gene,label_percent_digit = 1,label_alpha = 0) +
   scale_fill_gradient(low="white",high = "#6A6AFF")
+ggVennDiagram(CO_gene,label_percent_digit = 1,label_alpha = 0, force_upset = T)
 
 CO_list <- process_region_data(Venn(CO_gene))
 draw_from_list(list = CO_list$item[[7]],groups = "CO",id = "ENSEMBL")
@@ -259,3 +259,4 @@ p3 <- draw_from_list(list = meso_list2,groups = "ALL",
 p4 <- draw_from_list(list = pluri_list2,groups = "ALL",
                      id = "SYMBOL",title ="pluripotency",anno = F,show_row_names = F)
 p1 %v% p2 %v% p3 %v% p4
+
