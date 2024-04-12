@@ -6,7 +6,7 @@ source("RNAseq_function.R")
 
 # create_enrich_list ------------------------------------------------------
 data_path <- "/Users/benson/Documents/raw_data/RNA-seq1-3/V"
-list <- create_enrich_list("ip_Y_V_S_HCD_0_deg.xlsx",type = "ENTREZID")
+list <- get_list("ip_Y_V_S_CO_0_deg.xlsx",type = "ENTREZID")
 gene <- names(list)[abs(list) > 1]
 
 # GO classification -------------------------------------------------------
@@ -54,9 +54,9 @@ dotplot(de_pathway)
 
 # Reactome pathway gene set enrichment analysis
 gse_pathway <- gsePathway(list, 
-                pvalueCutoff = 0.2,
-                pAdjustMethod = "BH", 
-                verbose = FALSE)
+                          pvalueCutoff = 0.2,
+                          pAdjustMethod = "BH", 
+                          verbose = FALSE)
 head(gse_pathway)
 dotplot(gse_pathway)
 
