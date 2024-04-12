@@ -79,7 +79,7 @@ draw_heatmap <- function(file=file,
 
 # draw_from_list ----------------------------------------------------------
 draw_from_list <- function(list,
-                           groups=groups,
+                           groups="ALL",
                            id="ENSEMBL",
                            cluster=TRUE,
                            anno=TRUE,
@@ -181,9 +181,15 @@ draw_from_list <- function(list,
 # get_deg --------------------------------------------------------
 get_deg <- function(file=file,
                     log_crit = c(1,-1),
-                    dir="all"  # all/up/down
-                    
-){
+                    dir="all",  # all/up/down
+                    type="ENSEMBL"
+                    ){
+  
+  # 檢查 type 是否有效
+  if (!(type %in% c("ENTREZID", "ENSEMBL"))) {
+    stop("Invalid type. Allowed values are 'ENTREZID' or 'ENSEMBL'.")
+  }
+  
   cat(c(" -> load data from",file.path(data_path, file),"\n"))
   data <- readxl::read_xlsx(file.path(data_path, file)) # 讀檔
   
@@ -201,13 +207,53 @@ get_deg <- function(file=file,
     cat(c("<- error, check direction", "\n"))
     return(NULL)
   }
-  list <- data$ENSEMBL 
-  return(list)# 抓出差異ensembl id
+  
+  # 抓出差異gene id
+  if(type=="ENTREZID"){
+    list <- data$ENTREZID %>% na.omit()
+  }else{
+    list <- data$ENSEMBL
+  }
+  
+  return(list)
+}
+
+# get_list ------------------------------------------------------
+get_list <- function(file_name, 
+                     type = "ENTREZID"
+                     ) {
+  # 檢查 type 是否有效
+  if (!(type %in% c("ENTREZID", "ENSEMBL"))) {
+    stop("Invalid type. Allowed values are 'ENTREZID' or 'ENSEMBL'.")
+  }
+  # 讀取資料
+  raw_df <- readxl::read_xlsx(file.path(data_path, file_name)) %>% as.data.frame()
+  
+  # 根據不同的類型選擇相應的欄位名稱
+  if (type == "ENTREZID") {
+    id_col <- "ENTREZID"
+  } else {
+    id_col <- "ENSEMBL"
+  }
+  
+  # 處理資料
+  df <- raw_df %>%
+    select(all_of(id_col), M) %>%
+    group_by(across(all_of(id_col))) %>%
+    summarize(across(where(is.numeric), mean)) %>%
+    arrange(desc(M)) 
+  
+  # 創建列表
+  enrich_list <- df$M 
+  names(enrich_list) <- df[[id_col]]
+  enrich_list <-  na.omit(enrich_list)
+  
+  return(enrich_list)
 }
 
 # gsea_run ----------------------------------------------------------------
 gsea_run <- function(file,
-                     all_gene=FALSE, 
+                     method="GSEA",
                      list,
                      list_id="ensembl",   # ensembl/symbol
                      gsea_term="ALL"  # "BP","MF","CC"
@@ -216,8 +262,12 @@ gsea_run <- function(file,
   if (!(list_id %in% c("ensembl", "symbol"))) {
     stop("Invalid type. Allowed values are 'ensembl' or 'symbol'")
   }
+  if (!(method %in% c("GSEA", "ORA"))) {
+    stop("Invalid type. Allowed methods are 'GSEA' or 'ORA'")
+  }
+  
   cat(c(" -> load data from",file.path(data_path, file),"\n"))
-  if(all_gene==TRUE){
+  if(method=="GSEA"){
     df <- readxl::read_xlsx(file.path(data_path, file))
     cat(c(" >- input all gene and run GSEA","\n"))
   } else {
@@ -261,7 +311,7 @@ gsea_run <- function(file,
 
 # kegg_run ----------------------------------------------------------------
 kegg_run <- function(file,
-                     all_gene=FALSE,
+                     method="GSEA",
                      list,
                      list_id="ensembl"   # ensembl/symbol
                      ){
@@ -269,9 +319,13 @@ kegg_run <- function(file,
   if (!(list_id %in% c("ensembl", "symbol"))) {
     stop("Invalid type. Allowed values are 'ensembl' or 'symbol'")
   }
+  if (!(method %in% c("GSEA", "ORA"))) {
+    stop("Invalid type. Allowed methods are 'GSEA' or 'ORA'")
+  }
+  
   # select gene in list
   cat(c(" -> load data from",file.path(data_path, file),"\n"))
-  if(all_gene==TRUE){
+  if(method=="GSEA"){
     df <- readxl::read_xlsx(file.path(data_path, file))
     cat(c(" >- input all gene and run KEGG","\n"))
   } else {
@@ -310,35 +364,6 @@ kegg_run <- function(file,
   return(kegg)
 }
 
-# create_enrich_list ------------------------------------------------------
-create_enrich_list <- function(file_name, type = "ENTREZID") {
-  # 檢查 type 是否有效
-  if (!(type %in% c("ENTREZID", "ENSEMBL"))) {
-    stop("Invalid type. Allowed values are 'ENTREZID' or 'ENSEMBL'.")
-  }
-  # 讀取資料
-  raw_df <- readxl::read_xlsx(file.path(data_path, file_name)) %>% as.data.frame()
-  
-  # 根據不同的類型選擇相應的欄位名稱
-  if (type == "ENTREZID") {
-    id_col <- "ENTREZID"
-  } else {
-    id_col <- "ENSEMBL"
-  }
-  
-  # 處理資料
-  df <- raw_df %>%
-    select(all_of(id_col), M) %>%
-    group_by(across(all_of(id_col))) %>%
-    summarize(across(where(is.numeric), mean)) %>%
-    arrange(desc(M)) 
-  
-  # 創建列表
-  enrich_list <- df$M 
-  names(enrich_list) <- df[[id_col]]
-  enrich_list <-  na.omit(enrich_list)
-  
-  return(enrich_list)
-}
+
 
 
