@@ -6,6 +6,8 @@ draw_heatmap <- function(file=file,
   cat(c(" -> load data from",file.path(data_path, file),"\n"))
   data <- readxl::read_xlsx(file.path(data_path, file)) # 讀檔
   data <- data %>% filter(abs(M)>log_crit)  # filter log2FC criteria
+  cat(c(" -> log2FC criteria is", log_crit,"\n"))
+  
   list <- data$ENSEMBL  # 抓出差異ensembl id
   gene_df <- data[,c("ENSEMBL","SYMBOL")] # 
   mycount_df$ENSEMBL <- rownames(mycount_df)
@@ -15,6 +17,8 @@ draw_heatmap <- function(file=file,
     summarize(across(where(is.numeric), sum)) %>% 
     column_to_rownames(., var = "SYMBOL")
   
+  # select groups
+  cat(c(" -> filtering data", "\n"))
   if(groups == "AS"){
     data_mat <- mat %>% select(ip_Y_V_S_CON,ip_Y_V_S_DMS,ip_Y_V_S_AS,ip_Y_V_S_BAP,ip_Y_V_S_AS_BAP)
   } else if(groups == "CO"){
@@ -31,15 +35,14 @@ draw_heatmap <- function(file=file,
                                ip_Y_V_S_LCD,ip_Y_V_S_HCD,ip_Y_V_S_BAP,ip_Y_V_S_AS_BAP,
                                ip_Y_V_S_CO_BAP,ip_Y_V_S_LCD_BAP,ip_Y_V_S_HCD_BAP)
   } else{
-    cat(c("<- please type in groups", "\n"))
+    cat(c("<- check groups", "\n"))
     return(NULL)
   }
   
-  cat(c(" -> filtering data", "\n"))
-  
   mat_scale <- data_mat %>% t() %>% scale(scale = T) %>% t() %>% as.matrix() %>% na.omit()
-  cat(c(" -> annotation", "\n"))
+  cat(c(" -> scaling", "\n"))
   
+  ### heat-map argument
   col <- colnames(mat_scale)
   
   # agent name
