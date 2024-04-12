@@ -1,23 +1,29 @@
 gsea_run <- function(file,
-                     all_gene=FALSE, 
+                     method="GSEA",
                      list,
-                     list_id="ensembl"   # ensembl/symbol
+                     list_id="ensembl",   # ensembl/symbol
+                     gsea_term="ALL"  # "BP","MF","CC"
                      ){
+  # 檢查 type 是否有效
+  if (!(list_id %in% c("ensembl", "symbol"))) {
+    stop("Invalid type. Allowed values are 'ensembl' or 'symbol'")
+  }
+  if (!(method %in% c("GSEA", "ORA"))) {
+    stop("Invalid type. Allowed methods are 'GSEA' or 'ORA'")
+  }
+  
   cat(c(" -> load data from",file.path(data_path, file),"\n"))
-  if(all_gene==TRUE){
+  if(method=="GSEA"){
     df <- readxl::read_xlsx(file.path(data_path, file))
     cat(c(" >- input all gene and run GSEA","\n"))
   } else {
     if(list_id=="ensembl"){
       df <- readxl::read_xlsx(file.path(data_path, file)) %>% 
         filter(ENSEMBL %in% list)
-    } else if(list_id=="symbol"){
+    } else {
       df <- readxl::read_xlsx(file.path(data_path, file)) %>% 
         filter(SYMBOL %in% list)
-    } else{
-      cat(c(" <- error: check list_id","\n"))
-      return(NULL)
-    }
+    } 
     cat(c(" -> input selected gene and run ORA","\n"))
   } 
   
@@ -34,9 +40,9 @@ gsea_run <- function(file,
     sort(., decreasing = TRUE)
   cat(c(" -> length of the gene list is",length(gsea_gene_list),"\n"))
   #run GSEA
-  cat(c(" -> running GSEA", "\n"))
+  cat(c(" -> running GSEA in", gsea_term ,"GSEA-term\n"))
   gse <- gseGO(geneList = gsea_gene_list, 
-               ont ="ALL", 
+               ont = gsea_term, 
                keyType = "ENSEMBL", 
                nPerm = 10000, 
                minGSSize = 3, 
