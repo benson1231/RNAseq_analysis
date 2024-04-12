@@ -1,4 +1,6 @@
-create_enrich_list <- function(file_name, type = "ENTREZID") {
+get_list <- function(file_name, 
+                     type = "ENTREZID"
+                     ) {
   # 檢查 type 是否有效
   if (!(type %in% c("ENTREZID", "ENSEMBL"))) {
     stop("Invalid type. Allowed values are 'ENTREZID' or 'ENSEMBL'.")
