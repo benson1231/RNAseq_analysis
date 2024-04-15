@@ -2,7 +2,7 @@
 # draw_heatmap ------------------------------------------------------------
 draw_heatmap <- function(file=file,
                          log_crit=3,
-                         groups=groups,
+                         groups="ALL",
                          show_row_names = TRUE
                          ){
   cat(c(" -> load data from",file.path(data_path, file),"\n"))
@@ -238,10 +238,11 @@ get_list <- function(file_name,
   
   # 處理資料
   df <- raw_df %>%
-    select(all_of(id_col), M) %>%
+    select(M, all_of(id_col)) %>%
     group_by(across(all_of(id_col))) %>%
     summarize(across(where(is.numeric), mean)) %>%
-    arrange(desc(M)) 
+    arrange(desc(M)) %>% 
+    setNames(c("logFC",all_of(id_col)))
   
   # 創建列表
   enrich_list <- df$M 
@@ -364,6 +365,49 @@ kegg_run <- function(file,
   return(kegg)
 }
 
+# get_df ------------------------------------------------------------------
+get_df <- function(file,
+                   de=F,
+                   list,
+                   dir="all",
+                   log_crit=c(1,-1)
+                   ){
+  if(de==TRUE){
+    if(dir=="all"){
+      df <- readxl::read_xlsx(file.path(data_path, file)) %>% 
+        as.data.frame() %>% 
+        filter(abs(M) > log_crit[1]) %>% 
+        select(M, SYMBOL) %>% 
+        setNames(c("logFC","gene"))
+    }else if(dir=="up"){
+      df <- readxl::read_xlsx(file.path(data_path, file)) %>% 
+        as.data.frame() %>% 
+        filter(M > log_crit[1]) %>% 
+        select(M, SYMBOL) %>% 
+        setNames(c("logFC","gene"))
+    }else if(dir=="down"){
+      df <- readxl::read_xlsx(file.path(data_path, file)) %>% 
+        as.data.frame() %>% 
+        filter(M < log_crit[2]) %>% 
+        select(M, SYMBOL) %>% 
+        setNames(c("logFC","gene"))
+    }else{
+      cat(c("<- error, check direction", "\n"))
+      return(NULL)
+    }
+    
+    return(df)
+    
+  } else {
+    df <- readxl::read_xlsx(file.path(data_path, file)) %>% 
+      as.data.frame() %>% 
+      filter(ENSEMBL %in% list) %>% 
+      select(M, SYMBOL) %>% 
+      setNames(c("logFC","gene"))
+    
+    return(df)
+  }
 
-
-
+  
+  
+}
