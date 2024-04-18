@@ -25,8 +25,10 @@ cobap <- readxl::read_xlsx(file.path(data_path, "ip_Y_V_S_CO_BAP_0_deg.xlsx")) %
 head(cobap)
 
 # run pathfindR
-# The available gene sets in pathfindR are “KEGG”, “Reactome”, “BioCarta”, 
+### The available gene sets in pathfindR are “KEGG”, “Reactome”, “BioCarta”, 
 # “GO-All”, “GO-BP”, “GO-CC” and “GO-MF”
+### pin_name_path argument can be one of “Biogrid”, “STRING”, “GeneMania”, 
+# “IntAct”, “KEGG”, “mmu_STRING”
 output_df1 <- run_pathfindR(co, p_val_threshold = 0.05, gene_sets = "KEGG")
 output_df2 <- run_pathfindR(cobap, p_val_threshold = 0.05, gene_sets = "KEGG")
 # change color parameters
@@ -41,13 +43,17 @@ combined_df <- combine_pathfindR_results(
   plot_common = F
 ) 
 head(combined_df,2)
+# enrichment dot plot
+enrichment_chart(
+  result_df = output_df1,
+  top_terms = 15
+)
 combined_results_graph(combined_df, use_description = T,
-                       selected_terms = combined_df$Term_Description[124]) + 
+                       selected_terms = combined_df$Term_Description[15]) + 
   scale_colour_manual(values = vertex_cols, name = NULL)
 # subset B_only
 b_only <- combined_df %>% subset(status=="B only")
-combined_results_graph(combined_df, use_description = F, 
-                       selected_terms = b_only$ID[1]) +
+combined_results_graph(combined_df, use_description = T) +
   scale_colour_manual(values = vertex_cols, name = NULL)
 # specific pathway
 combined_results_graph(combined_df, use_description = F, 
@@ -61,3 +67,11 @@ combined_results_graph(
   selected_terms = combined_df$Term_Description[1:4]
 ) + scale_colour_manual(values = vertex_cols, name = NULL) +
   ggtitle("")
+#
+example_pathfindR_output_clustered <- cluster_enriched_terms(output_df1,
+                                                             plot_dend = FALSE, 
+                                                             plot_clusters_graph = FALSE)
+# plotting only selected clusters for better visualization
+selected_clusters <- subset(example_pathfindR_output_clustered, Cluster %in% 1:5)
+enrichment_chart(selected_clusters, plot_by_cluster = TRUE)
+#> Plotting the enrichment bubble chart
