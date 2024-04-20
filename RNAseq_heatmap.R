@@ -118,9 +118,9 @@ draw_heatmap("ip_Y_V_S_CO_0_deg.xlsx",
              log_crit = 4)
 
 # draw heatmap form a list ------------------------------------------------
-list <- c("CYP1A1","CYP1B1","GADD45B","CDKN1B","ATR")
+list <- c("CYP1A1","CYP1B1","GADD45A","CDKN1A","ATR","MT1T","MT1G","MT1H")
 draw_from_list(list = list,
-               groups = "ALL",
+               groups = "CO",
                id = "SYMBOL")
 
 # get DEG list ------------------------------------------------------------
@@ -189,19 +189,28 @@ cc_list <- c("ATM", "ATR", "BUB1", "BUB1B", "BUB3", "CCNA1", "CCNA2",
 
 draw_from_list(list = cc_list,groups = "ALL",id = "SYMBOL",anno = T)
 
-p1 <- draw_from_list(list = ner_list,groups = "ALL",
+p1 <- draw_from_list(list = ner_list,groups = "CO",
                      id = "SYMBOL",title ="NER")
-p2 <- draw_from_list(list = ber_list,groups = "ALL",
+p2 <- draw_from_list(list = ber_list,groups = "CO",
                      id = "SYMBOL",title ="BER",anno = F)
-p3 <- draw_from_list(list = mmr_list,groups = "ALL",
+p3 <- draw_from_list(list = mmr_list,groups = "CO",
                      id = "SYMBOL",title ="MMR",anno = F)
-p4 <- draw_from_list(list = hr_list,groups = "ALL",
+p4 <- draw_from_list(list = hr_list,groups = "CO",
                      id = "SYMBOL",title ="HR",anno = F)
-p5 <- draw_from_list(list = nhej_list,groups = "ALL",
+p5 <- draw_from_list(list = nhej_list,groups = "CO",
                      id = "SYMBOL",title ="NHEJ",anno = F)
-p6 <- draw_from_list(list = fa_list,groups = "ALL",
+p6 <- draw_from_list(list = fa_list,groups = "CO",
                      id = "SYMBOL",title ="FANCONI",anno = F)
 p1 %v% p2 %v% p3 %v% p4 %v% p5 %v% p6
+
+draw_from_list(list = cc_list,groups = "ALL",
+               id = "SYMBOL",title ="cell cycle")
+
+draw_from_list(list = poly_list,groups = "ALL",
+               id = "SYMBOL",title ="polymerase")
+
+draw_from_list(list = meta_list,groups = "ALL",
+               id = "SYMBOL",title ="metabolism")
 
 # germ layer marker gene list --------------------------------------------------------
 ecto_list1 <- read.table("./marker_list/List_Gifford_EctoMarkers.txt") %>% as.list() %>% unlist()
@@ -260,3 +269,31 @@ p4 <- draw_from_list(list = pluri_list2,groups = "ALL",
                      id = "SYMBOL",title ="pluripotency",anno = F,show_row_names = F)
 p1 %v% p2 %v% p3 %v% p4
 
+# ADME --------------------------------------------------------------------
+ADME <- readxl::read_xlsx("/Users/benson/Documents/project/RNA-seq1-3/marker_list/ADME.xlsx") %>% as.data.frame()
+core_trans <- ADME %>% filter(type=="Core"& Class=="Transporter") %>% pull(`Gene Symbol`) 
+core_phase1 <- ADME %>% filter(type=="Core"& Class=="Phase I") %>% pull(`Gene Symbol`)
+core_phase2 <- ADME %>% filter(type=="Core"& Class=="Phase II") %>% pull(`Gene Symbol`)
+
+p1 <- draw_from_list(list = core_trans, groups = "ALL",
+                     id = "SYMBOL",title ="Transporter", show_row_names = T)
+p2 <- draw_from_list(list = core_phase1, groups = "ALL",
+                     id = "SYMBOL",title ="Phase I",anno = F,show_row_names = T)
+p3 <- draw_from_list(list = core_phase2, groups = "ALL",
+                     id = "SYMBOL",title ="Phase II",anno = F,show_row_names = T)
+p1 %v% p2 %v% p3
+
+Extended_trans <- ADME %>% filter(type=="Extended"& Class=="Transporter") %>% pull(`Gene Symbol`) 
+Extended_phase1 <- ADME %>% filter(type=="Extended"& Class=="Phase I") %>% pull(`Gene Symbol`)
+Extended_phase2 <- ADME %>% filter(type=="Extended"& Class=="Phase II") %>% pull(`Gene Symbol`)
+Extended_Modifier <- ADME %>% filter(type=="Extended"& Class=="Modifier") %>% pull(`Gene Symbol`)
+
+p1 <- draw_from_list(list = Extended_trans, groups = "ALL",
+                     id = "SYMBOL",title ="Transporter", show_row_names = T)
+p2 <- draw_from_list(list = Extended_phase1, groups = "ALL",
+                     id = "SYMBOL",title ="Phase I",anno = T,show_row_names = T)
+p3 <- draw_from_list(list = Extended_phase2, groups = "ALL",
+                     id = "SYMBOL",title ="Phase II",anno = T,show_row_names = T)
+p4 <- draw_from_list(list = Extended_Modifier, groups = "ALL",
+                     id = "SYMBOL",title ="Modifier",anno = T,show_row_names = T)
+p1 %v% p2 %v% p3 %v% p4
