@@ -120,7 +120,7 @@ draw_heatmap("ip_Y_V_S_CO_0_deg.xlsx",
 # draw heatmap form a list ------------------------------------------------
 list <- c("CYP1A1","CYP1B1","GADD45A","CDKN1A","ATR","MT1T","MT1G","MT1H")
 draw_from_list(list = list,
-               groups = "CO",
+               groups = "CD",
                id = "SYMBOL")
 
 # get DEG list ------------------------------------------------------------
