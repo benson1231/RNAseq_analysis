@@ -1,9 +1,10 @@
 # library -----------------------------------------------------------------
 library(ggVennDiagram)
+library(COmplexHeatmap)
 library(tidyverse)
+library(openxlsx)
 
 source("RNAseq_function.R")
-
 
 # data pathway ------------------------------------------------------------
 data_path <- "/Users/benson/Documents/raw_data/RNA-seq1-3/V"
@@ -11,57 +12,85 @@ data_path <- "/Users/benson/Documents/raw_data/RNA-seq1-3/V"
 # up ----------------------------------------------------------------------
 BAP_up <- get_deg(file = "ip_Y_V_S_BAP_0_deg.xlsx",
                   log_crit = c(1,-1),dir = "up")
-LCD_up <- get_deg(file = "ip_Y_V_S_LCD_0_deg.xlsx",
+CO_up <- get_deg(file = "ip_Y_V_S_CO_0_deg.xlsx",
                    log_crit = c(1,-1),dir = "up")
-LCD_BAP_up <- get_deg(file = "ip_Y_V_S_LCD_BAP_0_deg.xlsx",
+CO_BAP_up <- get_deg(file = "ip_Y_V_S_CO_BAP_0_deg.xlsx",
                        log_crit = c(1,-1),dir = "up")
-LCD_gene <- list(LCD = LCD_up,
+CO_gene <- list(CO = CO_up,
                 BAP = BAP_up,
-                LCD_BAP =LCD_BAP_up
+                CO_BAP =CO_BAP_up
                 )
  
-ggVennDiagram(LCD_gene,label_percent_digit = 1,label_alpha = 0) +
+ggVennDiagram(CO_gene,label_percent_digit = 1,label_alpha = 0) +
   scale_fill_gradient(low="white",high = "#FF2D2D")
 
-LCD_list <- process_region_data(Venn(LCD_gene))
-draw_from_list(list = LCD_list$item[[1]],groups = "CD",id = "ENSEMBL")
+CO_list <- process_region_data(Venn(CO_gene))
+# draw heatmap
+draw_from_list(list = CO_list$item[[3]],groups = "CO",id = "ENSEMBL")
+
+# 將venn diagram結果輸出成excel
+venn_to_excel(CO_list, name = "CO_up")
 
 # down ----------------------------------------------------------------------
 BAP_down <- get_deg(file = "ip_Y_V_S_BAP_0_deg.xlsx",
                     log_crit = c(1,-1),dir = "down")
-LCD_down <- get_deg(file = "ip_Y_V_S_LCD_0_deg.xlsx",
+CO_down <- get_deg(file = "ip_Y_V_S_CO_0_deg.xlsx",
                    log_crit = c(1,-1),dir = "down")
-LCD_BAP_down <- get_deg(file = "ip_Y_V_S_LCD_BAP_0_deg.xlsx",
+CO_BAP_down <- get_deg(file = "ip_Y_V_S_CO_BAP_0_deg.xlsx",
                        log_crit = c(1,-1),dir = "down")
-LCD_gene <- list(LCD = LCD_down,
+CO_gene <- list(CO = CO_down,
                 BAP = BAP_down,
-                LCD_BAP =LCD_BAP_down)
+                CO_BAP =CO_BAP_down)
 
-ggVennDiagram(LCD_gene,label_percent_digit = 1,label_alpha = 0) +
+ggVennDiagram(CO_gene,label_percent_digit = 1,label_alpha = 0) +
   scale_fill_gradient(low="white",high = "#6A6AFF")
 
-LCD_list <- process_region_data(Venn(LCD_gene))
-draw_from_list(list = LCD_list$item[[7]],groups = "CD",id = "ENSEMBL")
+CO_list <- process_region_data(Venn(CO_gene))
+# draw heatmap
+draw_from_list(list = CO_list$item[[3]],groups = "CD",id = "ENSEMBL")
+# 將venn diagram結果輸出成excel
+venn_to_excel(CO_list, name = "CO_down")
 
-# metal -------------------------------------------------------------------
-AS_down <- get_deg(file = "ip_Y_V_S_AS_0_deg.xlsx",
-                  log_crit = c(1,-1),dir = "down")
-CO_down <- get_deg(file = "ip_Y_V_S_CO_0_deg.xlsx",
-                  log_crit = c(1,-1),dir = "down")
-LCD_down <- get_deg(file = "ip_Y_V_S_LCD_0_deg.xlsx",
-                      log_crit = c(1,-1),dir = "down")
-HCD_down <- get_deg(file = "ip_Y_V_S_HCD_0_deg.xlsx",
-                  log_crit = c(1,-1),dir = "down")
-BAP_down <- get_deg(file = "ip_Y_V_S_BAP_0_deg.xlsx",
-                  log_crit = c(1,-1),dir = "down")
-gene <- list(AS = AS_down,
-             CO = CO_down,
-             LCD =LCD_down,
-             HCD = HCD_down,
-             BAP = BAP_down
-)
 
-ggVennDiagram(gene,label_percent_digit = 1,label_alpha = 0, force_upset = T)
-
-LCD_list <- process_region_data(Venn(gene))
-draw_from_list(list = LCD_list$item[[7]],groups = "CD",id = "ENSEMBL")
+# # metal -------------------------------------------------------------------
+# # up
+# CO_up <- get_deg(file = "ip_Y_V_S_CO_0_deg.xlsx",
+#                   log_crit = c(1,-1),dir = "up")
+# CO_up <- get_deg(file = "ip_Y_V_S_CO_0_deg.xlsx",
+#                   log_crit = c(1,-1),dir = "up")
+# CO_up <- get_deg(file = "ip_Y_V_S_CO_0_deg.xlsx",
+#                       log_crit = c(1,-1),dir = "up")
+# CO_up <- get_deg(file = "ip_Y_V_S_CO_0_deg.xlsx",
+#                   log_crit = c(1,-1),dir = "up")
+# BAP_up <- get_deg(file = "ip_Y_V_S_BAP_0_deg.xlsx",
+#                   log_crit = c(1,-1),dir = "up")
+# gene <- list(CO = CO_up,
+#              CO = CO_up,
+#              CO =CO_up,
+#              CO = CO_up,
+#              BAP = BAP_up
+# )
+# 
+# ggVennDiagram(gene,label_percent_digit = 1,label_alpha = 0, force_upset = T)
+# # down
+# CO_down <- get_deg(file = "ip_Y_V_S_CO_0_deg.xlsx",
+#                   log_crit = c(1,-1),dir = "down")
+# CO_down <- get_deg(file = "ip_Y_V_S_CO_0_deg.xlsx",
+#                   log_crit = c(1,-1),dir = "down")
+# CO_down <- get_deg(file = "ip_Y_V_S_CO_0_deg.xlsx",
+#                       log_crit = c(1,-1),dir = "down")
+# CO_down <- get_deg(file = "ip_Y_V_S_CO_0_deg.xlsx",
+#                   log_crit = c(1,-1),dir = "down")
+# BAP_down <- get_deg(file = "ip_Y_V_S_BAP_0_deg.xlsx",
+#                   log_crit = c(1,-1),dir = "down")
+# gene <- list(CO = CO_down,
+#              CO = CO_down,
+#              CO =CO_down,
+#              CO = CO_down,
+#              BAP = BAP_down
+# )
+# 
+# ggVennDiagram(gene,label_percent_digit = 1,label_alpha = 0, force_upset = T)
+# 
+# CO_list <- process_region_data(Venn(gene))
+# draw_from_list(list = CO_list$item[[7]],groups = "CD",id = "ENSEMBL")
