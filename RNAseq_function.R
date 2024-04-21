@@ -238,14 +238,14 @@ get_list <- function(file_name,
   
   # 處理資料
   df <- raw_df %>%
-    select(M, all_of(id_col)) %>%
+    select(all_of(id_col),M) %>%
     group_by(across(all_of(id_col))) %>%
     summarize(across(where(is.numeric), mean)) %>%
     arrange(desc(M)) %>% 
-    setNames(c("logFC",all_of(id_col)))
+    setNames(c(all_of(id_col),"logFC"))
   
   # 創建列表
-  enrich_list <- df$M 
+  enrich_list <- df$logFC 
   names(enrich_list) <- df[[id_col]]
   enrich_list <-  na.omit(enrich_list)
   
@@ -368,7 +368,7 @@ kegg_run <- function(file,
 # get_df ------------------------------------------------------------------
 get_df <- function(file,
                    de=F,
-                   list,
+                   list=c(),
                    dir="all",
                    log_crit=c(1,-1)
                    ){
@@ -411,3 +411,26 @@ get_df <- function(file,
   
   
 }
+
+# venn_to_excel -----------------------------------------------------------
+# 將venn diagram結果輸出成excel
+venn_to_excel <- function(venn_list, name) {
+  # list中資料依序加入data frame
+  max_length <- max(sapply(venn_list$item, length))
+  data_df <- data.frame(matrix(NA, ncol = length(venn_list$item), nrow = max_length))
+  for (i in 1:length(venn_list$item)) {
+    sublist <- venn_list$item[[i]]
+    data_df[, i] <- c(sublist, rep(NA, max_length - length(sublist)))
+    colnames(data_df) <- venn_list$name
+  }
+  # 設置欄寬
+  wb <- openxlsx::createWorkbook()
+  addWorksheet(wb, "Sheet1")
+  writeData(wb, "Sheet1", data_df)
+  for (i in 1:ncol(data_df)) {
+    setColWidths(wb, sheet = 1, cols = i, widths = "auto")
+  }
+  saveWorkbook(wb, paste0(name, ".xlsx"))
+  cat(paste("-> Output completed. File name is ", paste0(name, ".xlsx")))
+}
+
