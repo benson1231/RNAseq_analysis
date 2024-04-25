@@ -7,7 +7,8 @@ draw_heatmap <- function(file=file,
                          ){
   cat(c(" -> load data from",file.path(data_path, file),"\n"))
   data <- readxl::read_xlsx(file.path(data_path, file)) # 讀檔
-  data <- data %>% filter(abs(M)>log_crit)  # filter log2FC criteria
+  data <- data %>% filter(abs(M)>log_crit,
+                          !(SYMBOL%in% c("havana","ensembl_havana","havana_tagene")))  
   cat(c(" -> log2FC criteria is", log_crit,"\n"))
   
   list <- data$ENSEMBL  # 抓出差異ensembl id
@@ -42,7 +43,6 @@ draw_heatmap <- function(file=file,
   }
   
   mat_scale <- data_mat %>% t() %>% scale(scale = T) %>% t() %>% as.matrix() %>% na.omit()
-  cat(c(" -> scaling", "\n"))
   
   ### heat-map argument
   col <- colnames(mat_scale)
@@ -67,7 +67,6 @@ draw_heatmap <- function(file=file,
                                              'LCD_BAP'= '#0000E3', "HCD_BAP"="#000079"),
                                      clone=c('WT'="#FF2D2D",'L858R'="#FF9224",
                                              "DEL19"= "#66B3FF","YAP"="#2828FF")))
-  cat(c(" -> drawing heatmap", "\n"))
   
   ComplexHeatmap::Heatmap(mat_scale, top_annotation = ha, cluster_columns = F, 
                           show_row_names = show_row_names, 
@@ -89,30 +88,31 @@ draw_from_list <- function(list,
   cat(c(" -> input list with",length(list),"genes","\n"))
   if(id=="ENSEMBL"){
     list <- list  
-    mycount_df$ENSEMBL <- rownames(mycount_df)
-    new_df <- mycount_df %>% left_join(.,gene_df, by="ENSEMBL")
-    mat <- mycount_df %>% filter(.,rownames(mycount_df) %in% list) %>% 
+    mat <- mycount_df %>%
+      mutate(.,ENSEMBL=rownames(mycount_df)) %>% 
+      filter(.,rownames(mycount_df) %in% list,
+             !(SYMBOL%in% c("havana","ensembl_havana","havana_tagene"))) %>% 
       left_join(.,gene_df, by="ENSEMBL") %>% group_by(SYMBOL) %>%
       summarize(across(where(is.numeric), sum)) %>% na.omit() %>% 
       column_to_rownames(., var = "SYMBOL")
   }else if(id=="SYMBOL"){
     list <- list  
-    mycount_df$ENSEMBL <- rownames(mycount_df)
-    new_df <- mycount_df %>% 
+    mat <- mycount_df %>% 
+      mutate(.,ENSEMBL=rownames(mycount_df)) %>% 
       left_join(.,gene_df, by="ENSEMBL") %>% 
       group_by(SYMBOL) %>%
       summarize(across(where(is.numeric), sum)) %>% 
       na.omit() %>% 
+      filter(.,SYMBOL %in% list,
+             !(SYMBOL %in% c("havana","ensembl_havana","havana_tagene"))) %>% 
       column_to_rownames(.,var="SYMBOL") 
-    mat <- new_df %>% 
-      filter(.,rownames(new_df) %in% list)
   }else{
     cat(c("<- error: check gene id", "\n"))
     return(NULL)
   }
+  cat(c(" -> get",length(rownames(mat)),"genes matrix. Scaling and plotting.","\n"))
   
   # select groups
-  cat(c(" -> filtering data", "\n"))
   if(groups == "AS"){
     data_mat <- mat %>% select(ip_Y_V_S_CON,ip_Y_V_S_DMS,ip_Y_V_S_AS,ip_Y_V_S_BAP,ip_Y_V_S_AS_BAP)
   } else if(groups == "CO"){
@@ -134,7 +134,6 @@ draw_from_list <- function(list,
   }
   
   # scaling
-  cat(c(" -> scaling data", "\n"))
   mat_scale <- data_mat %>% t() %>% scale() %>% t() %>% as.matrix() %>% na.omit()
   
   # heat-map argument
@@ -160,7 +159,6 @@ draw_from_list <- function(list,
                                              'LCD_BAP'= '#0000E3', "HCD_BAP"="#000079"),
                                      clone=c('WT'="#FF2D2D",'L858R'="#FF9224",
                                              "DEL19"= "#66B3FF","YAP"="#2828FF")))
-  cat(c(" -> drawing heatmap", "\n"))
   
   if(anno==T){
     ComplexHeatmap::Heatmap(mat_scale, top_annotation = ha, cluster_columns = F, 
@@ -182,37 +180,75 @@ draw_from_list <- function(list,
 get_deg <- function(file=file,
                     log_crit = c(1,-1),
                     dir="all",  # all/up/down
-                    type="ENSEMBL"
+                    type="ENSEMBL",
+                    top="all"
                     ){
   
   # 檢查 type 是否有效
-  if (!(type %in% c("ENTREZID", "ENSEMBL"))) {
-    stop("Invalid type. Allowed values are 'ENTREZID' or 'ENSEMBL'.")
+  if (!(type %in% c("ENTREZID", "ENSEMBL", "SYMBOL"))) {
+    stop("Invalid type. Allowed values are 'ENTREZID','ENSEMBL'or 'SYMBOL'.")
   }
   
   cat(c(" -> load data from",file.path(data_path, file),"\n"))
-  data <- readxl::read_xlsx(file.path(data_path, file)) # 讀檔
+  raw_data <- readxl::read_xlsx(file.path(data_path, file)) # 讀檔
   
-  # filter log2FC criteria
-  if(dir=="all"){
-    data <- data %>% filter(M >log_crit[1]| M < log_crit[2])
-    cat(c(" -> abs(log2FC) larger than", log_crit[1],"\n"))
-  }else if(dir=="up"){
-    data <- data %>% filter(M > log_crit[1])
-    cat(c(" -> log2FC larger than", log_crit[1],"\n"))
-  }else if(dir=="down"){
-    data <- data %>% filter(M < log_crit[2])
-    cat(c(" -> log2FC smaller than", log_crit[2],"\n"))
-  }else{
-    cat(c("<- error, check direction", "\n"))
-    return(NULL)
+  # 根據不同的類型選擇相應的欄位名稱
+  if(type == "ENTREZID") {
+    id_col <- "ENTREZID"
+  } else if(type == "ENSEMBL") {
+    id_col <- "ENSEMBL"
+  } else{
+    id_col <- "SYMBOL"
   }
   
+  # 處理資料
+  data <- raw_data %>%
+    as.data.frame() %>% 
+    select(all_of(id_col),M) %>%
+    group_by(across(all_of(id_col))) %>%
+    summarize(across(where(is.numeric), mean)) %>%
+    arrange(desc(M))
+  
+  if(top=="all"){
+    if(dir=="all"){
+      data <- data %>% filter(M >log_crit[1]| M < log_crit[2])
+      cat(c(" -> abs(log2FC) larger than", log_crit[1],"->",length(data$M),"genes.\n"))
+    }else if(dir=="up"){
+      data <- data %>% filter(M > log_crit[1])
+      cat(c(" -> log2FC larger than", log_crit[1],"->",length(data$M),"genes.\n"))
+    }else if(dir=="down"){
+      data <- data %>% filter(M < log_crit[2])
+      cat(c(" -> log2FC smaller than", log_crit[2],"->",length(data$M),"genes.\n"))
+    }else{
+      cat(c("<- error, check direction", "\n"))
+      return(NULL)
+    }
+  } else{
+    if(dir=="all"){
+      data <- data %>% filter(M >log_crit[1]| M < log_crit[2]) %>% 
+        arrange(desc(abs(M))) %>% .[1:top,]
+      cat(c(" -> abs(log2FC) larger than",log_crit[1],"->",length(data$M),"genes.\n"))
+    }else if(dir=="up"){
+      data <- data %>% filter(M > log_crit[1]) %>% 
+        arrange(desc(abs(M))) %>% .[1:top,]
+      cat(c(" -> log2FC larger than", log_crit[1],"->",length(data$M),"genes.\n"))
+    }else if(dir=="down"){
+      data <- data %>% filter(M < log_crit[2]) %>% 
+        arrange(desc(abs(M))) %>% .[1:top,]
+      cat(c(" -> log2FC smaller than", log_crit[2],"->",length(data$M),"genes.\n"))
+    }else{
+      cat(c("<- error, check direction", "\n"))
+      return(NULL)
+    }
+  }
+
   # 抓出差異gene id
   if(type=="ENTREZID"){
     list <- data$ENTREZID %>% na.omit()
-  }else{
+  }else if(type=="ENSEMBL"){
     list <- data$ENSEMBL
+  }else{
+    list <- data$SYMBOL
   }
   
   return(list)
@@ -407,9 +443,6 @@ get_df <- function(file,
     
     return(df)
   }
-
-  
-  
 }
 
 # venn_to_excel -----------------------------------------------------------
