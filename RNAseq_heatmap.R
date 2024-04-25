@@ -2,6 +2,7 @@
 library(tidyverse)
 library(ComplexHeatmap)
 library(ggVennDiagram)
+library(KEGGREST)
 
 source("RNAseq_function.R")
 
@@ -35,15 +36,24 @@ draw_heatmap("ip_Y_V_S_CO_0_deg.xlsx",
 
 # draw heatmap form a list ------------------------------------------------
 list <- c("CYP1A1","CYP1B1","GADD45A","CDKN1A","ATR","MT1T","MT1G","MT1H")
-draw_from_list(list = list,
-               groups = "CD",
+draw_from_list(list = gene_list_even,
+               groups = "CO",
                id = "SYMBOL")
 
 # get DEG list ------------------------------------------------------------
-CO_up <- get_deg("ip_Y_V_S_CO_0_deg.xlsx",
-                 log_crit = c(1,-1),dir = "all",type = "SYMBOL",top = 50)
-
-draw_from_list(list = CO_up,groups = "CO",id = "SYMBOL")
+file_name <- "ip_Y_V_S_CO_BAP_0_deg.xlsx"
+# up_all
+DEG <- get_deg(file_name, log_crit = c(1,-1),dir = "up",type = "SYMBOL")
+draw_from_list(list = DEG, groups = "CO", id = "SYMBOL", show_row_names = F)
+# up_100
+top <- get_deg(file_name, log_crit = c(1,-1),dir = "up",type = "SYMBOL", top = 100)
+draw_from_list(list = top, groups = "CO", id = "SYMBOL")
+# down_all
+DEG <- get_deg(file_name, log_crit = c(1,-1),dir = "down",type = "SYMBOL")
+draw_from_list(list = DEG, groups = "CO", id = "SYMBOL", show_row_names = F)
+# down_100
+top <- get_deg(file_name, log_crit = c(1,-1),dir = "down",type = "SYMBOL", top = 100)
+draw_from_list(list = top, groups = "CO", id = "SYMBOL")
 
 # venn diagram ------------------------------------------------------------
 CO_gene <- list(CO = CO_down,
@@ -210,5 +220,10 @@ p4 <- draw_from_list(list = Extended_Modifier, groups = "ALL",
                      id = "SYMBOL",title ="Modifier",anno = T,show_row_names = T)
 p1 %v% p2 %v% p3 %v% p4
 
-# top 50 ------------------------------------------------------------------
+# kegg_list ---------------------------------------------------------------
+id_num <- 15
+keg_list <- get_kegg_list(combined_df$ID[id_num])
+draw_from_list(list = keg_list, groups = "CO", id = "SYMBOL",
+               title = paste(combined_df$ID[id_num],":", combined_df$Term_Description[id_num]), 
+               show_row_names = T)
 
