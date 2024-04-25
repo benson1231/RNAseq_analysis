@@ -204,6 +204,8 @@ get_deg <- function(file=file,
   # 處理資料
   data <- raw_data %>%
     as.data.frame() %>% 
+    filter(.,!(SYMBOL%in% c("havana","ensembl_havana","havana_tagene")),
+           geneBiotype=="protein_coding") %>% 
     select(all_of(id_col),M) %>%
     group_by(across(all_of(id_col))) %>%
     summarize(across(where(is.numeric), mean)) %>%
@@ -465,5 +467,20 @@ venn_to_excel <- function(venn_list, name) {
   }
   saveWorkbook(wb, paste0(name, ".xlsx"))
   cat(paste("-> Output completed. File name is ", paste0(name, ".xlsx")))
+}
+
+# get_kegg_list -----------------------------------------------------------
+get_kegg_list <- function(path_name
+                          ){
+  # 获取指定通路的基因列表
+  pathway_df <- KEGGREST::keggGet(path_name)[[1]]
+  pathway_genes <- pathway_df$GENE
+  cat(c(" -> pathway name:", pathway_df$NAME,"\n"))
+  # 提取基因名称
+  gene_names <- sapply(strsplit(pathway_genes, ";"), `[`, 1)
+  # 删除奇数索引的元素
+  gene_list_even <- gene_names[seq_along(gene_names) %% 2 == 0]
+  cat(c(" ->",length(gene_list_even),"genes involved.\n"))
+  return(gene_list_even)
 }
 
