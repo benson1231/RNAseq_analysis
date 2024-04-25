@@ -6,7 +6,7 @@ library(ggVennDiagram)
 source("RNAseq_function.R")
 
 # load annotation data ----------------------------------------------------
-gene_df <- "/Users/benson/Documents/project/RNA-seq1-3/gene_df.RDS" %>% 
+gene_df <- "/Users/benson/Documents/project/RNA-seq1-3/anno_gene.RDS" %>% 
   readRDS() %>%
   select(ENSEMBL,SYMBOL)
 
@@ -27,95 +27,11 @@ mycount_df <- raw_counts_df %>%
 
 # df <- raw_counts_df[,grepl("ip_L_V_L|ip_Y_V_S", colnames(mycount_df))]
 
-# heat-map with annotation ---------------------------------------------------------
-# scaling the gene row
-mycount_scale <- mycount_df %>% t() %>% scale() %>% t()
-col <- colnames(mycount_scale)
-
-# creat heat-map annotation arguments
-# agent name
-agent <- factor (
-  str_replace_all(col, c("ip_L_V_L_|ip_Y_V_S_"='')),
-  levels=c('CON','DMS',"AZA","DAC",'AS',"CO","LCD","HCD","BAP",
-           "AS_BAP","CO_BAP","LCD_BAP","HCD_BAP"))
-# clone name
-clone <- factor( 
-  str_replace_all(str_sub(col, 4,4), 
-                  c("W" = "WT", "L" = "L858R", "D" = "DEL19", "Y" = "YAP")),
-  levels=c('WT','L858R',"DEL19","YAP"))
-# draw hp
-ha <- HeatmapAnnotation(agent = agent, clone = clone,
-                        col = list(agent=c('CON'='#E0E0E0', 'DMS'='#ADADAD', 'AZA'='#FFD2D2', 'DAC'='#FF9797',
-                                          'AS'='#FFFF37','CO'='#FF5151','LCD'='#0080FF',
-                                          'HCD'='#005AB5', 'BAP'='#00DB00', 'AS_BAP'='#FFDC35', 'CO_BAP'= '#EA0000',
-                                          'LCD_BAP'= '#0000E3', "HCD_BAP"="#000079"),
-                                  clone=c('WT'="#FF2D2D",'L858R'="#FF9224",
-                                          "DEL19"= "#66B3FF","YAP"="#2828FF")))
-
-ComplexHeatmap::Heatmap(mycount_scale, top_annotation = ha, cluster_columns = F, 
-                        show_row_names = F, show_column_names = F,
-                        name = "Z-score"
-                        )
-
-# DEG heatmap -----------------------------------------------------------------
-data_path <- "/Users/benson/Documents/raw_data/RNA-seq1-3/V"
-# read data
-co <- readxl::read_xlsx(file.path(data_path, "ip_Y_V_S_CO_0_deg.xlsx"))
-co <- co %>% filter(abs(M)>1)  # select DEG from our criteria
-deg_list <- co$ENSEMBL  # select DEG ensembl id
-# matching raw count data and filtered ensembl id
-mycount_df$ENSEMBL <- rownames(mycount_df)
-filtered_df <- mycount_df %>% 
-  left_join(.,gene_df, by="ENSEMBL") %>% 
-  filter(.,rownames(mycount_df) %in% deg_list) %>% 
-  group_by(SYMBOL) %>% 
-  summarize(across(where(is.numeric), sum)) %>% 
-  na.omit() %>% 
-  column_to_rownames(., var = "SYMBOL") %>% 
-  select(ip_L_V_L_CON,ip_L_V_L_DMS,ip_L_V_L_CO,ip_L_V_L_BAP,ip_L_V_L_CO_BAP)
-
-# scaling gene raw in data matrix
-mat_scale <- filtered_df %>% 
-  t() %>% 
-  scale() %>% 
-  t() %>% 
-  as.matrix() %>%
-  na.omit()
-
-col <- colnames(mat_scale)
-# agent name
-agent <- factor (
-  str_replace_all(col, c("ip_L_V_L_|ip_Y_V_S_"='')),
-  levels=c('CON','DMS',"AZA","DAC",'AS',"CO","LCD","HCD","BAP",
-           "AS_BAP","CO_BAP","LCD_BAP","HCD_BAP"))
-
-# clone name
-clone <- factor( 
-  str_replace_all(str_sub(col, 4,4), 
-                  c("W" = "WT", "L" = "L858R", "D" = "DEL19", "Y" = "YAP")),
-  levels=c('WT','L858R',"DEL19","YAP"))
-
-# draw hp
-ha <- HeatmapAnnotation(agent = agent, clone = clone,
-                        col = list(agent=c('CON'='#E0E0E0', 'DMS'='#ADADAD', 'AZA'='#FFD2D2', 'DAC'='#FF9797',
-                                           'AS'='#FFFF37','CO'='#FF5151','LCD'='#0080FF',
-                                           'HCD'='#005AB5', 'BAP'='#00DB00', 'AS_BAP'='#FFDC35', 'CO_BAP'= '#EA0000',
-                                           'LCD_BAP'= '#0000E3', "HCD_BAP"="#000079"),
-                                   clone=c('WT'="#FF2D2D",'L858R'="#FF9224",
-                                           "DEL19"= "#66B3FF","YAP"="#2828FF"))
-                        )
-
-ComplexHeatmap::Heatmap(mat_scale, top_annotation = ha, cluster_columns = F, 
-                        show_row_names = T, show_column_names = F,
-                        name = "Z-score"
-                        )
-
-
 # draw heatmap ---------------------------------------------------
 data_path <- "/Users/benson/Documents/raw_data/RNA-seq1-3/V"
 draw_heatmap("ip_Y_V_S_CO_0_deg.xlsx",
              groups = "CO",
-             log_crit = 4)
+             log_crit = 5)
 
 # draw heatmap form a list ------------------------------------------------
 list <- c("CYP1A1","CYP1B1","GADD45A","CDKN1A","ATR","MT1T","MT1G","MT1H")
@@ -124,14 +40,10 @@ draw_from_list(list = list,
                id = "SYMBOL")
 
 # get DEG list ------------------------------------------------------------
-BAP_down <- get_deg("ip_Y_V_S_BAP_0_deg.xlsx",
-                    log_crit = c(1,-1),dir = "down")
-CO_down <- get_deg("ip_Y_V_S_CO_0_deg.xlsx",
-                   log_crit = c(1,-1),dir = "down")
-CO_BAP_down <- get_deg("ip_Y_V_S_CO_BAP_0_deg.xlsx",
-                       log_crit = c(1,-1),dir = "down")
+CO_up <- get_deg("ip_Y_V_S_CO_0_deg.xlsx",
+                 log_crit = c(1,-1),dir = "all",type = "SYMBOL",top = 50)
 
-draw_from_list(list = CO_down,groups = "CO",id = "ENSEMBL")
+draw_from_list(list = CO_up,groups = "CO",id = "SYMBOL")
 
 # venn diagram ------------------------------------------------------------
 CO_gene <- list(CO = CO_down,
@@ -297,3 +209,6 @@ p3 <- draw_from_list(list = Extended_phase2, groups = "ALL",
 p4 <- draw_from_list(list = Extended_Modifier, groups = "ALL",
                      id = "SYMBOL",title ="Modifier",anno = T,show_row_names = T)
 p1 %v% p2 %v% p3 %v% p4
+
+# top 50 ------------------------------------------------------------------
+
