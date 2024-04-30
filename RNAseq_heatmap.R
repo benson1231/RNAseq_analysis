@@ -36,12 +36,15 @@ draw_heatmap("ip_Y_V_S_CO_0_deg.xlsx",
 
 # draw heatmap form a list ------------------------------------------------
 list <- c("CYP1A1","CYP1B1","GADD45A","CDKN1A","ATR","MT1T","MT1G","MT1H")
-draw_from_list(list = gene_list_even,
+list <- c("EGFR","ALK","ROS1","BRAF","MET","RET","Her2","KRAS","TP53","PTEN",
+          "ERBB2", "HRAS", "NRAS","STK11","NTRK1", "NTRK2","NTRK3")
+mt <- c("MT1M","MT1E","MT1H","MT1A","MT1G","MT2A")
+draw_from_list(list = mt,
                groups = "CO",
                id = "SYMBOL")
 
 # get DEG list ------------------------------------------------------------
-file_name <- "ip_Y_V_S_CO_BAP_0_deg.xlsx"
+file_name <- "ip_Y_V_S_CO_0_deg.xlsx"
 # up_all
 DEG <- get_deg(file_name, log_crit = c(1,-1),dir = "up",type = "SYMBOL")
 draw_from_list(list = DEG, groups = "CO", id = "SYMBOL", show_row_names = F)
@@ -96,20 +99,21 @@ fa_list <- c("FANCA","FANCB","FANCC","BRCA2","FANCD2","FANCE","FANCF","FANCG","F
              "UBE2T")
 nhej_list <- c("XRCC6","XRCC5","PRKDC","LIG4","XRCC4","DCLRE1C","NHEJ1")
 chrom_list <- c("H2AX","CHAF1A","SETMAR","ATRX")
-cc_list <- c("ATM", "ATR", "BUB1", "BUB1B", "BUB3", "CCNA1", "CCNA2", 
+cc_list <- c("CCNA1", "CCNA2", 
              "CCNB1", "CCNB2", "CCNB3", "CCND1", "CCND2", "CCND3", "CCNE1", "CCNE2", 
              "CCNH", "CDC14A", "CDC14B", "CDC16", "CDC20", "CDC23", "CDC25A", "CDC25B",
              "CDC25C", "CDC26", "CDC27", "CDC6", "CDC7", "CDK2", "CDK4", "CDK6", 
              "CDK7", "CDKN1A", "CDKN1B", "CDKN1C", "CDKN2A", "CDKN2B", "CDKN2C", 
-             "CDKN2D", "CHEK1", "CHEK2", "CREBBP", "CUL1","DBF4", "E2F1", "E2F2", 
-             "E2F3", "EP300", "ESPL1", "FZR1", "GADD45A", "GADD45B", "GADD45G", 
+             "CDKN2D", "CREBBP", "CUL1","DBF4", "E2F1", "E2F2", 
+             "E2F3", "EP300", "ESPL1", "FZR1",
              "GSK3B", "HDAC1", "HDAC2", "MAD1L1", "MAD2L1", "MAD2L2", "MCM2", "MCM3",
              "MCM4", "MCM5", "MCM6", "MCM7", "MDM2", "PCNA", "PKMYT1", "PLK1", "PRKDC",
              "PTTG1", "PTTG2", "RB1", "RBL1", "RBL2", "RBX1", "SFN", "SKP1", "SKP2", 
              "SMAD2", "SMAD3", "SMAD4", "SMC1A", "SMC1B", "TFDP1", "TGFB1", "TGFB2", 
-             "TGFB3", "TP53")
+             "TGFB3")
+ddr_cc <- c("TP53","ATM", "ATR","CHEK1","CHEK2","GADD45A","GADD45B", "GADD45G","MDC1","TOPBP1")
 
-draw_from_list(list = cc_list,groups = "ALL",id = "SYMBOL",anno = T)
+draw_from_list(list = ddr_cc,groups = "CD",id = "SYMBOL",anno = T)
 
 p1 <- draw_from_list(list = ner_list,groups = "CO",
                      id = "SYMBOL",title ="NER")
@@ -220,10 +224,85 @@ p4 <- draw_from_list(list = Extended_Modifier, groups = "ALL",
                      id = "SYMBOL",title ="Modifier",anno = T,show_row_names = T)
 p1 %v% p2 %v% p3 %v% p4
 
-# kegg_list ---------------------------------------------------------------
-id_num <- 15
-keg_list <- get_kegg_list(combined_df$ID[id_num])
-draw_from_list(list = keg_list, groups = "CO", id = "SYMBOL",
-               title = paste(combined_df$ID[id_num],":", combined_df$Term_Description[id_num]), 
-               show_row_names = T)
 
+# cancer type -------------------------------------------------------------
+# GRN <- readxl::read_xlsx("/Users/benson/Documents/project/RNA-seq1-3/marker_list/Cancer Type-Specific GRNs.xlsx") %>% as.data.frame()
+# 
+# p1 <- draw_from_list(list = GRN$Adrenal, groups = "ALL", id = "SYMBOL", title ="Adrenal", show_row_names = FALSE)
+# p2 <- draw_from_list(list = GRN$Brain, groups = "ALL", id = "SYMBOL", title ="Brain", show_row_names = FALSE,anno = FALSE)
+# p3 <- draw_from_list(list = GRN$Breast, groups = "ALL", id = "SYMBOL", title ="Breast", show_row_names = FALSE,anno = FALSE)
+# p4 <- draw_from_list(list = GRN$Cervix, groups = "ALL", id = "SYMBOL", title ="Cervix", show_row_names = FALSE,anno = FALSE)
+# p5 <- draw_from_list(list = GRN$Colon, groups = "ALL", id = "SYMBOL", title ="Colon", show_row_names = FALSE,anno = FALSE)
+# p6 <- draw_from_list(list = GRN$Esophageal, groups = "ALL", id = "SYMBOL", title ="Esophageal", show_row_names = FALSE,anno = FALSE)
+# p7 <- draw_from_list(list = GRN$Glioblastoma, groups = "ALL", id = "SYMBOL", title ="Glioblastoma", show_row_names = FALSE,anno = FALSE)
+# p8 <- draw_from_list(list = GRN$Leukemia, groups = "ALL", id = "SYMBOL", title ="Leukemia", show_row_names = FALSE,anno = FALSE)
+# p9 <- draw_from_list(list = GRN$Lung, groups = "ALL", id = "SYMBOL", title ="Lung", show_row_names = FALSE,anno = FALSE)
+# p10 <- draw_from_list(list = GRN$Lymphoid, groups = "ALL", id = "SYMBOL", title ="Lymphoid", show_row_names = FALSE,anno = FALSE)
+# p11 <- draw_from_list(list = GRN$Melanoma, groups = "ALL", id = "SYMBOL", title ="Melanoma", show_row_names = FALSE,anno = FALSE)
+# p12 <- draw_from_list(list = GRN$Pancreas, groups = "ALL", id = "SYMBOL", title ="Pancreas", show_row_names = FALSE,anno = FALSE)
+# p13 <- draw_from_list(list = GRN$Prostate, groups = "ALL", id = "SYMBOL", title ="Prostate", show_row_names = FALSE,anno = FALSE)
+# p14 <- draw_from_list(list = GRN$Stomach, groups = "ALL", id = "SYMBOL", title ="Stomach", show_row_names = FALSE,anno = FALSE)
+# p15 <- draw_from_list(list = GRN$Thyroid, groups = "ALL", id = "SYMBOL", title ="Thyroid", show_row_names = FALSE,anno = FALSE)
+# p16 <- draw_from_list(list = GRN$Uterus, groups = "ALL", id = "SYMBOL", title ="Uterus", show_row_names = FALSE,anno = FALSE)
+# p17 <- draw_from_list(list = GRN$Uveal, groups = "ALL", id = "SYMBOL", title ="Uveal", show_row_names = FALSE,anno = FALSE)
+
+# p1 %v% p2 %v% p3 %v% p4 %v% p5 %v% p6 %v% p7 %v% p8 %v% p9 %v% p10 %v% p11 %v% p12 %v% p13 %v% p14 %v% p15 %v% p16 %v% p17
+
+GRN_de <- readxl::read_xlsx("/Users/benson/Documents/project/RNA-seq1-3/marker_list/ GRN genes enriched in cancer cells relative to normal cells.xlsx") %>% as.data.frame()
+p1 <- draw_from_list(list = GRN_de$"Adrenal -> Adrenal", groups = "CD", id = "SYMBOL", title ="1", show_row_names =  TRUE)
+p2 <- draw_from_list(list = GRN_de$"Brain -> Brain", groups = "CD", id = "SYMBOL", title ="2", show_row_names = TRUE,anno = FALSE)
+p3 <- draw_from_list(list = GRN_de$"Neuron -> Brain", groups = "CD", id = "SYMBOL", title ="3", show_row_names = TRUE,anno = FALSE)
+p4 <- draw_from_list(list = GRN_de$"Breast -> Breast", groups = "CD", id = "SYMBOL", title ="4", show_row_names = TRUE,anno = FALSE)
+p5 <- draw_from_list(list = GRN_de$"Cervix -> Cervix", groups = "CD", id = "SYMBOL", title ="5", show_row_names = TRUE,anno = FALSE)
+p6 <- draw_from_list(list = GRN_de$"Colon -> Colon", groups = "CD", id = "SYMBOL", title ="6", show_row_names = TRUE,anno = FALSE)
+p7 <- draw_from_list(list = GRN_de$"Esophagus -> Esophageal", groups = "CD", id = "SYMBOL", title ="7", show_row_names = TRUE,anno = FALSE)
+p8 <- draw_from_list(list = GRN_de$"Brain -> Glioblastoma", groups = "CD", id = "SYMBOL", title ="8", show_row_names = TRUE,anno = FALSE)
+p9 <- draw_from_list(list = GRN_de$"Neuron -> Glioblastoma", groups = "CD", id = "SYMBOL", title ="9", show_row_names = TRUE,anno = FALSE)
+p10 <- draw_from_list(list = GRN_de$"Lung -> Lung", groups = "CD", id = "SYMBOL", title ="10", show_row_names = TRUE,anno = FALSE)
+p11 <- draw_from_list(list = GRN_de$"Lymph Node -> Lymphoid", groups = "CD", id = "SYMBOL", title ="11", show_row_names = TRUE,anno = T)
+p12 <- draw_from_list(list = GRN_de$"Pancreas -> Pancreas", groups = "CD", id = "SYMBOL", title ="12", show_row_names = TRUE,anno = FALSE)
+p13 <- draw_from_list(list = GRN_de$"Prostate -> Prostate", groups = "CD", id = "SYMBOL", title ="13", show_row_names = TRUE,anno = FALSE)
+p14 <- draw_from_list(list = GRN_de$"Skin -> Melanoma", groups = "CD", id = "SYMBOL", title ="14", show_row_names = TRUE,anno = FALSE)
+p15 <- draw_from_list(list = GRN_de$"Stomach -> Stomach", groups = "CD", id = "SYMBOL", title ="15", show_row_names = TRUE,anno = T)
+p16 <- draw_from_list(list = GRN_de$"Thyroid -> Thyroid", groups = "CD", id = "SYMBOL", title ="16", show_row_names = TRUE,anno = FALSE)
+p17 <- draw_from_list(list = GRN_de$"B Cell -> Leukemia", groups = "CD", id = "SYMBOL", title ="17", show_row_names = TRUE,anno = FALSE)
+p18 <- draw_from_list(list = GRN_de$"T Cell -> Leukemia", groups = "CD", id = "SYMBOL", title ="18", show_row_names = TRUE,anno = FALSE)
+p19 <- draw_from_list(list = GRN_de$"Uterus -> Uterus", groups = "CD", id = "SYMBOL", title ="19", show_row_names = TRUE,anno = FALSE)
+
+p1 %v% p2 %v% p3 %v% p4 %v% p5 %v% p6 %v% p7 %v% p8 %v% p9 %v% p10 
+p11 %v% p12 %v% p13 %v% p14
+p15 %v% p16 %v% p17 %v% p18 %v% p19
+
+# kegg_list ----------------`Breast -> Breast`t# kegg_list ---------------------------------------------------------------
+### single
+group <- "CO"
+id_num <- 8
+keg_list <- get_kegg_list(output_df$ID[id_num])
+draw_from_list(list = keg_list, groups = "CO", id = "SYMBOL",
+               title = paste(output_df$ID[id_num],":", output_df$Term_Description[id_num]), 
+               show_row_names = T) 
+# hsa id
+group <- "CO"
+id <- "hsa05207"
+term <- "Chemical carcinogenesis - receptor activation"
+keg_list <- get_kegg_list(id)
+draw_from_list(list = keg_list, groups = "CO", id = "SYMBOL",
+               title = paste(id,":", term), 
+               show_row_names = T) 
+
+### all
+setwd("/Users/benson/Documents/project/RNA-seq1-3/plot/CO")
+# group_name <- "CO"
+# for(i in 1:nrow(combined_df)){
+#   name <- paste0(group_name,"_",combined_df$ID[i], ".pdf")
+#   keg_list <- get_kegg_list(combined_df$ID[i])
+#   pdf(name)
+#   draw_from_list(list = keg_list, groups = "CO", id = "SYMBOL",
+#                  title = paste(combined_df$ID[i],":", combined_df$Term_Description[i]), 
+#                  show_row_names = T) %>% print()
+#   dev.off()
+#   cat(c(" ->",i,"of",length(combined_df$ID),"finished"))
+# }
+# saveRDS(combined_df,"combined_df.RDS")
+combined_df <- "/Users/benson/Documents/project/RNA-seq1-3/combined_df.RDS" %>% 
+  readRDS()
