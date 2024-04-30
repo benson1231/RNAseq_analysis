@@ -90,9 +90,10 @@ draw_from_list <- function(list,
     list <- list  
     mat <- mycount_df %>%
       mutate(.,ENSEMBL=rownames(mycount_df)) %>% 
+      left_join(.,gene_df, by="ENSEMBL") %>% 
       filter(.,rownames(mycount_df) %in% list,
              !(SYMBOL%in% c("havana","ensembl_havana","havana_tagene"))) %>% 
-      left_join(.,gene_df, by="ENSEMBL") %>% group_by(SYMBOL) %>%
+      group_by(SYMBOL) %>%
       summarize(across(where(is.numeric), sum)) %>% na.omit() %>% 
       column_to_rownames(., var = "SYMBOL")
   }else if(id=="SYMBOL"){
@@ -472,13 +473,13 @@ venn_to_excel <- function(venn_list, name) {
 # get_kegg_list -----------------------------------------------------------
 get_kegg_list <- function(path_name
                           ){
-  # 获取指定通路的基因列表
+  # 獲取指定通路的基因列表
   pathway_df <- KEGGREST::keggGet(path_name)[[1]]
   pathway_genes <- pathway_df$GENE
   cat(c(" -> pathway name:", pathway_df$NAME,"\n"))
-  # 提取基因名称
+  # 提取基因名
   gene_names <- sapply(strsplit(pathway_genes, ";"), `[`, 1)
-  # 删除奇数索引的元素
+  # 刪除奇數索引之元素
   gene_list_even <- gene_names[seq_along(gene_names) %% 2 == 0]
   cat(c(" ->",length(gene_list_even),"genes involved.\n"))
   return(gene_list_even)
