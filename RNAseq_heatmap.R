@@ -35,8 +35,24 @@ mycount_df <- "/Users/benson/Documents/project/RNA-seq1-3/mycount_tmm.RDS" %>%
 # draw heatmap ---------------------------------------------------
 data_path <- "/Users/benson/Documents/raw_data/RNA-seq1-3/V"
 draw_heatmap("ip_Y_V_S_CO_0_deg.xlsx",
-             groups = "CO",
-             log_crit = 7)
+             groups = "only_CO",
+             log_crit = 1)
+
+# cluster analysis --------------------------------------------------------
+file_name <- "ip_Y_V_S_CO_0_deg.xlsx"
+k_value <- 3
+draw_heatmap(file_name,
+             groups = "only_CO",
+             log_crit = 2,km = 3)
+cluster_result <- draw_heatmap(file_name,
+                               groups = "only_CO",
+                               log_crit = 2, row_km = T, km=k_value,return_cluster = T)
+cluster1 <- names(cluster_result [cluster_result == 1])
+cluster2 <- names(cluster_result [cluster_result == 2])
+cluster3 <- names(cluster_result [cluster_result == 3])
+draw_from_list(list = cluster1,
+               groups = "CO",
+               id = "SYMBOL")
 
 # draw heatmap form a list ------------------------------------------------
 list <- c("CYP1A1","CYP1B1","GADD45A","CDKN1A","ATR","MT1T","MT1G","MT1H")
@@ -45,8 +61,8 @@ list <- c("EGFR","ALK","ROS1","BRAF","MET","RET","Her2","KRAS","TP53","PTEN",
 mt <- c("MT1A", "MT1B", "MT1E", "MT1F", "MT1G", "MT1H", "MT1M", "MT1X","MT2A",
         "TP53","NFKB1","NQO1","GCLC","MCM2","ALK","NPM1")
 
-draw_from_list(list = mt,
-               groups = "CD",
+draw_from_list(list = clsu,
+               groups = "CO",
                id = "SYMBOL",label_num = T,anno = T)
 
 # get DEG list ------------------------------------------------------------
