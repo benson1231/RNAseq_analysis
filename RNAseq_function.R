@@ -8,7 +8,7 @@ draw_heatmap <- function(file=file,
                          row_km=T,
                          km=0,
                          return_cluster=F
-){
+                         ){
   cat(c(" -> load data from",file.path(data_path, file),"\n"))
   data <- readxl::read_xlsx(file.path(data_path, file)) # 讀檔
   data <- data %>% filter(abs(M)>log_crit,
@@ -26,32 +26,74 @@ draw_heatmap <- function(file=file,
   
   # select groups
   if(groups == "AS"){
-    data_mat <- mat %>% select(ip_Y_V_S_CON,ip_Y_V_S_DMS,ip_Y_V_S_AS,ip_Y_V_S_BAP,ip_Y_V_S_AS_BAP)
+    data_mat <- mat %>% select(ip_Y_V_S_CON, ip_Y_V_S_DMS, ip_Y_V_S_AS, ip_Y_V_S_BAP, ip_Y_V_S_AS_BAP)
+    anno <- list(agent = c('CON' = '#E0E0E0', 'DMS' = '#ADADAD', 'AS' = '#FFFF37',
+                           'BAP' = '#00DB00', 'AS_BAP' = '#FFDC35'),
+                 clone = c('WT' = '#FF2D2D', 'L858R' = '#FF9224',
+                           'DEL19' = '#66B3FF', 'YAP' = '#2828FF'))
   } else if(groups == "CO"){
-    data_mat <- mat %>% select(ip_Y_V_S_CON,ip_Y_V_S_DMS,ip_Y_V_S_CO,ip_Y_V_S_BAP,ip_Y_V_S_CO_BAP)
+    data_mat <- mat %>% select(ip_Y_V_S_CON, ip_Y_V_S_DMS, ip_Y_V_S_CO, ip_Y_V_S_BAP, ip_Y_V_S_CO_BAP)
+    anno <- list(agent = c('CON' = '#E0E0E0', 'DMS' = '#ADADAD', 'CO' = '#FF5151',
+                           'BAP' = '#00DB00', 'CO_BAP' = '#EA0000'),
+                 clone = c('WT' = '#FF2D2D', 'L858R' = '#FF9224',
+                           'DEL19' = '#66B3FF', 'YAP' = '#2828FF'))
   } else if(groups == "CD"){
-    data_mat <- mat %>% select(ip_Y_V_S_CON,ip_Y_V_S_DMS,ip_Y_V_S_LCD,ip_Y_V_S_HCD,
-                               ip_Y_V_S_BAP,ip_Y_V_S_LCD_BAP,ip_Y_V_S_HCD_BAP)
+    data_mat <- mat %>% select(ip_Y_V_S_CON, ip_Y_V_S_DMS, ip_Y_V_S_LCD, ip_Y_V_S_HCD,
+                               ip_Y_V_S_BAP, ip_Y_V_S_LCD_BAP, ip_Y_V_S_HCD_BAP)
+    anno <- list(agent = c('CON' = '#E0E0E0', 'DMS' = '#ADADAD', 'LCD' = '#0080FF',
+                           'HCD' = '#005AB5', 'BAP' = '#00DB00',
+                           'LCD_BAP' = '#0000E3', 'HCD_BAP' = '#000079'),
+                 clone = c('WT' = '#FF2D2D', 'L858R' = '#FF9224',
+                           'DEL19' = '#66B3FF', 'YAP' = '#2828FF'))
   } else if(groups == "BAP"){
-    data_mat <- mat %>% select(ip_Y_V_S_CON,ip_Y_V_S_DMS,ip_Y_V_S_BAP,ip_Y_V_S_AS_BAP
-                               ,ip_Y_V_S_CO_BAP,ip_Y_V_S_LCD_BAP,ip_Y_V_S_HCD_BAP)
+    data_mat <- mat %>% select(ip_Y_V_S_CON, ip_Y_V_S_DMS, ip_Y_V_S_BAP, ip_Y_V_S_AS_BAP
+                               , ip_Y_V_S_CO_BAP, ip_Y_V_S_LCD_BAP, ip_Y_V_S_HCD_BAP)
+    anno <- list(agent = c('CON' = '#E0E0E0', 'DMS' = '#ADADAD', 'BAP' = '#00DB00',
+                           'AS_BAP' = '#FFDC35', 'CO_BAP' = '#EA0000',
+                           'LCD_BAP' = '#0000E3', 'HCD_BAP' = '#000079'),
+                 clone = c('WT' = '#FF2D2D', 'L858R' = '#FF9224',
+                           'DEL19' = '#66B3FF', 'YAP' = '#2828FF'))
   } else if(groups == "ALL"){
-    data_mat <- mat %>% select(ip_Y_V_S_CON,ip_Y_V_S_DMS,ip_Y_V_S_AZA,ip_Y_V_S_DAC,
-                               ip_Y_V_S_AS,ip_Y_V_S_CO,
-                               ip_Y_V_S_LCD,ip_Y_V_S_HCD,ip_Y_V_S_BAP,ip_Y_V_S_AS_BAP,
-                               ip_Y_V_S_CO_BAP,ip_Y_V_S_LCD_BAP,ip_Y_V_S_HCD_BAP)
+    data_mat <- mat %>% select(ip_Y_V_S_CON, ip_Y_V_S_DMS, ip_Y_V_S_AZA, ip_Y_V_S_DAC,
+                               ip_Y_V_S_AS, ip_Y_V_S_CO,
+                               ip_Y_V_S_LCD, ip_Y_V_S_HCD, ip_Y_V_S_BAP, ip_Y_V_S_AS_BAP,
+                               ip_Y_V_S_CO_BAP, ip_Y_V_S_LCD_BAP, ip_Y_V_S_HCD_BAP)
+    anno <- list(agent = c('CON' = '#E0E0E0', 'DMS' = '#ADADAD', 'AZA' = '#FFD2D2', 'DAC' = '#FF9797',
+                           'AS' = '#FFFF37', 'CO' = '#FF5151',
+                           'LCD' = '#0080FF', 'HCD' = '#005AB5', 'BAP' = '#00DB00',
+                           'AS_BAP' = '#FFDC35', 'CO_BAP' = '#EA0000',
+                           'LCD_BAP' = '#0000E3', 'HCD_BAP' = '#000079'),
+                 clone = c('WT' = '#FF2D2D', 'L858R' = '#FF9224',
+                           'DEL19' = '#66B3FF', 'YAP' = '#2828FF'))
   } else if(groups == "only_CO"){
-    data_mat <- mat %>% select(ip_Y_V_S_CO, ip_Y_V_S_BAP,ip_Y_V_S_CO_BAP)
+    data_mat <- mat %>% select(ip_Y_V_S_CO, ip_Y_V_S_BAP, ip_Y_V_S_CO_BAP)
+    anno <- list(agent = c('CO' = '#FF5151', 'BAP' = '#00DB00', 'CO_BAP' = '#EA0000'),
+                 clone = c('WT' = '#FF2D2D', 'L858R' = '#FF9224',
+                           'DEL19' = '#66B3FF', 'YAP' = '#2828FF'))
   } else if(groups == "only_AS"){
-    data_mat <- mat %>% select(ip_Y_V_S_AS, ip_Y_V_S_BAP,ip_Y_V_S_AS_BAP)
+    data_mat <- mat %>% select(ip_Y_V_S_AS, ip_Y_V_S_BAP, ip_Y_V_S_AS_BAP)
+    anno <- list(agent = c('AS' = '#FFFF37', 'BAP' = '#00DB00', 'AS_BAP' = '#FFDC35'),
+                 clone = c('WT' = '#FF2D2D', 'L858R' = '#FF9224',
+                           'DEL19' = '#66B3FF', 'YAP' = '#2828FF'))
   } else if(groups == "only_LCD"){
-    data_mat <- mat %>% select(ip_Y_V_S_LCD, ip_Y_V_S_BAP,ip_Y_V_S_LCD_BAP)
+    data_mat <- mat %>% select(ip_Y_V_S_LCD, ip_Y_V_S_BAP, ip_Y_V_S_LCD_BAP)
+    anno <- list(agent = c('LCD' = '#0080FF', 'BAP' = '#00DB00', 'LCD_BAP' = '#0000E3'),
+                 clone = c('WT' = '#FF2D2D', 'L858R' = '#FF9224',
+                           'DEL19' = '#66B3FF', 'YAP' = '#2828FF'))
   } else if(groups == "only_HCD"){
-    data_mat <- mat %>% select(ip_Y_V_S_HCD, ip_Y_V_S_BAP,ip_Y_V_S_HCD_BAP)
+    data_mat <- mat %>% select(ip_Y_V_S_HCD, ip_Y_V_S_BAP, ip_Y_V_S_HCD_BAP)
+    anno <- list(agent = c('HCD' = '#005AB5', 'BAP' = '#00DB00', 'HCD_BAP' = '#000079'),
+                 clone = c('WT' = '#FF2D2D', 'L858R' = '#FF9224',
+                           'DEL19' = '#66B3FF', 'YAP' = '#2828FF'))
   } else if(groups == "only_CD"){
-    data_mat <- mat %>% select(ip_Y_V_S_LCD,ip_Y_V_S_HCD, ip_Y_V_S_BAP,
-                               ip_Y_V_S_LCD_BAP,ip_Y_V_S_HCD)
-  } else{
+    data_mat <- mat %>% select(ip_Y_V_S_LCD, ip_Y_V_S_HCD, ip_Y_V_S_BAP,
+                               ip_Y_V_S_LCD_BAP, ip_Y_V_S_HCD_BAP)
+    anno <- list(agent = c('LCD' = '#0080FF', 'HCD' = '#005AB5',
+                           'BAP' = '#00DB00', 'LCD_BAP' = '#0000E3', 'HCD_BAP' = '#000079'),
+                 clone = c('WT' = '#FF2D2D', 'L858R' = '#FF9224',
+                           'DEL19' = '#66B3FF', 'YAP' = '#2828FF'))
+  }
+  else{
     cat(c("<- check groups", "\n"))
     return(NULL)
   }
@@ -80,12 +122,7 @@ draw_heatmap <- function(file=file,
   
   # draw hp
   ha <- HeatmapAnnotation(agent = agent, clone = clone,
-                          col = list(agent=c('CON'='#E0E0E0', 'DMS'='#ADADAD', 'AZA'='#FFD2D2', 'DAC'='#FF9797',
-                                             'AS'='#FFFF37','CO'='#FF5151','LCD'='#0080FF',
-                                             'HCD'='#005AB5', 'BAP'='#00DB00', 'AS_BAP'='#FFDC35', 'CO_BAP'= '#EA0000',
-                                             'LCD_BAP'= '#0000E3', "HCD_BAP"="#000079"),
-                                     clone=c('WT'="#FF2D2D",'L858R'="#FF9224",
-                                             "DEL19"= "#66B3FF","YAP"="#2828FF")))
+                          col = anno)
 
   heat <- ComplexHeatmap::Heatmap(mat_scale, top_annotation = ha, cluster_columns = F, 
                                   show_row_names = show_row_names, 
@@ -141,32 +178,74 @@ draw_from_list <- function(list,
   cat(c(" -> get",length(rownames(mat)),"genes matrix. Scaling and plotting.","\n"))
   
   # select groups
+  # select groups
   if(groups == "AS"){
-    data_mat <- mat %>% select(ip_Y_V_S_CON,ip_Y_V_S_DMS,ip_Y_V_S_AS,ip_Y_V_S_BAP,ip_Y_V_S_AS_BAP)
+    data_mat <- mat %>% select(ip_Y_V_S_CON, ip_Y_V_S_DMS, ip_Y_V_S_AS, ip_Y_V_S_BAP, ip_Y_V_S_AS_BAP)
+    ann <- list(agent = c('CON' = '#E0E0E0', 'DMS' = '#ADADAD', 'AS' = '#FFFF37',
+                           'BAP' = '#00DB00', 'AS_BAP' = '#FFDC35'),
+                 clone = c('WT' = '#FF2D2D', 'L858R' = '#FF9224',
+                           'DEL19' = '#66B3FF', 'YAP' = '#2828FF'))
   } else if(groups == "CO"){
-    data_mat <- mat %>% select(ip_Y_V_S_CON,ip_Y_V_S_DMS,ip_Y_V_S_CO,ip_Y_V_S_BAP,ip_Y_V_S_CO_BAP)
+    data_mat <- mat %>% select(ip_Y_V_S_CON, ip_Y_V_S_DMS, ip_Y_V_S_CO, ip_Y_V_S_BAP, ip_Y_V_S_CO_BAP)
+    ann <- list(agent = c('CON' = '#E0E0E0', 'DMS' = '#ADADAD', 'CO' = '#FF5151',
+                           'BAP' = '#00DB00', 'CO_BAP' = '#EA0000'),
+                 clone = c('WT' = '#FF2D2D', 'L858R' = '#FF9224',
+                           'DEL19' = '#66B3FF', 'YAP' = '#2828FF'))
   } else if(groups == "CD"){
-    data_mat <- mat %>% select(ip_Y_V_S_CON,ip_Y_V_S_DMS,ip_Y_V_S_LCD,ip_Y_V_S_HCD,
-                               ip_Y_V_S_BAP,ip_Y_V_S_LCD_BAP,ip_Y_V_S_HCD_BAP)
+    data_mat <- mat %>% select(ip_Y_V_S_CON, ip_Y_V_S_DMS, ip_Y_V_S_LCD, ip_Y_V_S_HCD,
+                               ip_Y_V_S_BAP, ip_Y_V_S_LCD_BAP, ip_Y_V_S_HCD_BAP)
+    ann <- list(agent = c('CON' = '#E0E0E0', 'DMS' = '#ADADAD', 'LCD' = '#0080FF',
+                           'HCD' = '#005AB5', 'BAP' = '#00DB00',
+                           'LCD_BAP' = '#0000E3', 'HCD_BAP' = '#000079'),
+                 clone = c('WT' = '#FF2D2D', 'L858R' = '#FF9224',
+                           'DEL19' = '#66B3FF', 'YAP' = '#2828FF'))
   } else if(groups == "BAP"){
-    data_mat <- mat %>% select(ip_Y_V_S_CON,ip_Y_V_S_DMS,ip_Y_V_S_BAP,ip_Y_V_S_AS_BAP
-                               ,ip_Y_V_S_CO_BAP,ip_Y_V_S_LCD_BAP,ip_Y_V_S_HCD_BAP)
+    data_mat <- mat %>% select(ip_Y_V_S_CON, ip_Y_V_S_DMS, ip_Y_V_S_BAP, ip_Y_V_S_AS_BAP
+                               , ip_Y_V_S_CO_BAP, ip_Y_V_S_LCD_BAP, ip_Y_V_S_HCD_BAP)
+    ann <- list(agent = c('CON' = '#E0E0E0', 'DMS' = '#ADADAD', 'BAP' = '#00DB00',
+                           'AS_BAP' = '#FFDC35', 'CO_BAP' = '#EA0000',
+                           'LCD_BAP' = '#0000E3', 'HCD_BAP' = '#000079'),
+                 clone = c('WT' = '#FF2D2D', 'L858R' = '#FF9224',
+                           'DEL19' = '#66B3FF', 'YAP' = '#2828FF'))
   } else if(groups == "ALL"){
-    data_mat <- mat %>% select(ip_Y_V_S_CON,ip_Y_V_S_DMS,ip_Y_V_S_AZA,ip_Y_V_S_DAC,
-                               ip_Y_V_S_AS,ip_Y_V_S_CO,
-                               ip_Y_V_S_LCD,ip_Y_V_S_HCD,ip_Y_V_S_BAP,ip_Y_V_S_AS_BAP,
-                               ip_Y_V_S_CO_BAP,ip_Y_V_S_LCD_BAP,ip_Y_V_S_HCD_BAP)
+    data_mat <- mat %>% select(ip_Y_V_S_CON, ip_Y_V_S_DMS, ip_Y_V_S_AZA, ip_Y_V_S_DAC,
+                               ip_Y_V_S_AS, ip_Y_V_S_CO,
+                               ip_Y_V_S_LCD, ip_Y_V_S_HCD, ip_Y_V_S_BAP, ip_Y_V_S_AS_BAP,
+                               ip_Y_V_S_CO_BAP, ip_Y_V_S_LCD_BAP, ip_Y_V_S_HCD_BAP)
+    ann <- list(agent = c('CON' = '#E0E0E0', 'DMS' = '#ADADAD', 'AZA' = '#FFD2D2', 'DAC' = '#FF9797',
+                           'AS' = '#FFFF37', 'CO' = '#FF5151',
+                           'LCD' = '#0080FF', 'HCD' = '#005AB5', 'BAP' = '#00DB00',
+                           'AS_BAP' = '#FFDC35', 'CO_BAP' = '#EA0000',
+                           'LCD_BAP' = '#0000E3', 'HCD_BAP' = '#000079'),
+                 clone = c('WT' = '#FF2D2D', 'L858R' = '#FF9224',
+                           'DEL19' = '#66B3FF', 'YAP' = '#2828FF'))
   } else if(groups == "only_CO"){
-    data_mat <- mat %>% select(ip_Y_V_S_CO, ip_Y_V_S_BAP,ip_Y_V_S_CO_BAP)
+    data_mat <- mat %>% select(ip_Y_V_S_CO, ip_Y_V_S_BAP, ip_Y_V_S_CO_BAP)
+    ann <- list(agent = c('CO' = '#FF5151', 'BAP' = '#00DB00', 'CO_BAP' = '#EA0000'),
+                 clone = c('WT' = '#FF2D2D', 'L858R' = '#FF9224',
+                           'DEL19' = '#66B3FF', 'YAP' = '#2828FF'))
   } else if(groups == "only_AS"){
-    data_mat <- mat %>% select(ip_Y_V_S_AS, ip_Y_V_S_BAP,ip_Y_V_S_AS_BAP)
+    data_mat <- mat %>% select(ip_Y_V_S_AS, ip_Y_V_S_BAP, ip_Y_V_S_AS_BAP)
+    ann <- list(agent = c('AS' = '#FFFF37', 'BAP' = '#00DB00', 'AS_BAP' = '#FFDC35'),
+                 clone = c('WT' = '#FF2D2D', 'L858R' = '#FF9224',
+                           'DEL19' = '#66B3FF', 'YAP' = '#2828FF'))
   } else if(groups == "only_LCD"){
-    data_mat <- mat %>% select(ip_Y_V_S_LCD, ip_Y_V_S_BAP,ip_Y_V_S_LCD_BAP)
+    data_mat <- mat %>% select(ip_Y_V_S_LCD, ip_Y_V_S_BAP, ip_Y_V_S_LCD_BAP)
+    ann <- list(agent = c('LCD' = '#0080FF', 'BAP' = '#00DB00', 'LCD_BAP' = '#0000E3'),
+                 clone = c('WT' = '#FF2D2D', 'L858R' = '#FF9224',
+                           'DEL19' = '#66B3FF', 'YAP' = '#2828FF'))
   } else if(groups == "only_HCD"){
-    data_mat <- mat %>% select(ip_Y_V_S_HCD, ip_Y_V_S_BAP,ip_Y_V_S_HCD_BAP)
+    data_mat <- mat %>% select(ip_Y_V_S_HCD, ip_Y_V_S_BAP, ip_Y_V_S_HCD_BAP)
+    ann <- list(agent = c('HCD' = '#005AB5', 'BAP' = '#00DB00', 'HCD_BAP' = '#000079'),
+                 clone = c('WT' = '#FF2D2D', 'L858R' = '#FF9224',
+                           'DEL19' = '#66B3FF', 'YAP' = '#2828FF'))
   } else if(groups == "only_CD"){
-    data_mat <- mat %>% select(ip_Y_V_S_LCD,ip_Y_V_S_HCD, ip_Y_V_S_BAP,
-                               ip_Y_V_S_LCD_BAP,ip_Y_V_S_HCD)
+    data_mat <- mat %>% select(ip_Y_V_S_LCD, ip_Y_V_S_HCD, ip_Y_V_S_BAP,
+                               ip_Y_V_S_LCD_BAP, ip_Y_V_S_HCD_BAP)
+    ann <- list(agent = c('LCD' = '#0080FF', 'HCD' = '#005AB5',
+                           'BAP' = '#00DB00', 'LCD_BAP' = '#0000E3', 'HCD_BAP' = '#000079'),
+                 clone = c('WT' = '#FF2D2D', 'L858R' = '#FF9224',
+                           'DEL19' = '#66B3FF', 'YAP' = '#2828FF'))
   } else{
     cat(c("<- please type in groups", "\n"))
     reture(NULL)
@@ -198,12 +277,7 @@ draw_from_list <- function(list,
   
   # draw hp
   ha <- HeatmapAnnotation(agent = agent, clone = clone,
-                          col = list(agent=c('CON'='#E0E0E0', 'DMS'='#ADADAD', 'AZA'='#FFD2D2', 'DAC'='#FF9797',
-                                             'AS'='#FFFF37','CO'='#FF7575','LCD'='#0080FF',
-                                             'HCD'='#005AB5', 'BAP'='#00DB00', 'AS_BAP'='#FFD306', 'CO_BAP'= '#FF0000',
-                                             'LCD_BAP'= '#0000E3', "HCD_BAP"="#000079"),
-                                     clone=c('WT'="#FF2D2D",'L858R'="#FF9224",
-                                             "DEL19"= "#66B3FF","YAP"="#2828FF")))
+                          col = ann)
   
   if(anno==T){
     if(label_num==T){
