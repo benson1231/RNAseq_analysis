@@ -6,7 +6,18 @@ ggVennDiagram  https://gaospecial.github.io/ggVennDiagram/articles/using-ggVennD
 NOISeq  https://www.bioconductor.org/packages/release/bioc/html/NOISeq.html  
 pathfindR  https://cran.r-project.org/web/packages/pathfindR/vignettes/intro_vignette.html  
 decoupleR  https://www.bioconductor.org/packages/release/bioc/html/decoupleR.html  
+iPath  https://www.bioconductor.org/packages/release/bioc/html/iPath.html  
 
 ### work shop
 DGE_workshop  https://hbctraining.github.io/DGE_workshop/schedule/1.5-day.html  
 rna-seq-analysis  https://learn.gencore.bio.nyu.edu/rna-seq-analysis/over-representation-analysis/  
+
+### analysis website
+string  https://string-db.org/  
+iPath  https://suke18.shinyapps.io/iPath/  
+timer  http://timer.comp-genomics.org/timer/  
+metascape  https://metascape.org/gp/index.html#/main/step1  
+stemchecker  http://193.136.227.155:8080/stemchecker/stemchecker.jsf
+geneontology  https://geneontology.org/  
+
+
