@@ -3,7 +3,8 @@
 draw_heatmap <- function(file=file,
                          log_crit=3,
                          groups="ALL",
-                         show_row_names = TRUE
+                         show_row_names = TRUE,
+                         log_scale=FALSE
                          ){
   cat(c(" -> load data from",file.path(data_path, file),"\n"))
   data <- readxl::read_xlsx(file.path(data_path, file)) # 讀檔
@@ -42,7 +43,12 @@ draw_heatmap <- function(file=file,
     return(NULL)
   }
   
-  mat_scale <- data_mat %>% t() %>% scale(scale = T) %>% t() %>% as.matrix() %>% na.omit()
+  if(log_scale==TRUE){
+    mat_scale <- data_mat %>% log2() %>% 
+      t() %>% scale(scale = T) %>% t() %>% as.matrix() %>% na.omit()
+  }else{
+    mat_scale <- data_mat %>% t() %>% scale(scale = T) %>% t() %>% as.matrix() %>% na.omit()
+  }
   
   ### heat-map argument
   col <- colnames(mat_scale)
@@ -83,7 +89,9 @@ draw_from_list <- function(list,
                            cluster=TRUE,
                            anno=TRUE,
                            title="",
-                           show_row_names = TRUE# ENSEMBL/SYMBOL
+                           show_row_names = TRUE, # ENSEMBL/SYMBOL
+                           label_num=F,
+                           log_scale=FALSE
                            ){
   cat(c(" -> input list with",length(list),"genes","\n"))
   if(id=="ENSEMBL"){
@@ -135,8 +143,14 @@ draw_from_list <- function(list,
   }
   
   # scaling
-  mat_scale <- data_mat %>% t() %>% scale() %>% t() %>% as.matrix() %>% na.omit()
+  if(log_scale==TRUE){
+    mat_scale <- data_mat %>% log2() %>%  t() %>% scale() %>% t() %>% as.matrix() %>% na.omit()
+  } else{
+    mat_scale <- data_mat  %>%  t() %>% scale() %>% t() %>% as.matrix() %>% na.omit()
+  }
   
+  # color
+  col_fun = colorRamp2(c(-2, 0, 2), c("blue", "white", "red"))
   # heat-map argument
   col <- colnames(mat_scale)
   
@@ -162,18 +176,38 @@ draw_from_list <- function(list,
                                              "DEL19"= "#66B3FF","YAP"="#2828FF")))
   
   if(anno==T){
-    ComplexHeatmap::Heatmap(mat_scale, top_annotation = ha, cluster_columns = F, 
-                            show_row_names = show_row_names,
-                            show_column_names = F,cluster_rows = cluster,
-                            name = "Z-score", row_title = title
-    )
-  }else{
-    ComplexHeatmap::Heatmap(mat_scale, cluster_columns = F, 
-                            show_row_names = show_row_names, 
-                            show_column_names = F,
-                            cluster_rows = cluster,
-                            name = "Z-score", row_title = title
-    )
+    if(label_num==T){
+      ComplexHeatmap::Heatmap(mat_scale, top_annotation = ha, cluster_columns = F, 
+                              show_row_names = show_row_names,
+                              show_column_names = F,cluster_rows = cluster,
+                              col = col_fun,
+                              name = "Z-score", row_title = title,
+                              cell_fun = function(j, i, x, y, width, height, fill) {
+                                grid.text(sprintf("%.1f", mat_scale[i, j]), x, y, gp = gpar(fontsize = 10))
+                              })
+    }else{
+      ComplexHeatmap::Heatmap(mat_scale, top_annotation = ha, cluster_columns = F, 
+                              show_row_names = show_row_names,
+                              show_column_names = F,cluster_rows = cluster,
+                              name = "Z-score", row_title = title
+                              )
+    }
+  } else{
+    if(label_num==T){
+      ComplexHeatmap::Heatmap(mat_scale, cluster_columns = F, 
+                              show_row_names = show_row_names,
+                              show_column_names = F,cluster_rows = cluster,
+                              name = "Z-score", row_title = title,
+                              cell_fun = function(j, i, x, y, width, height, fill) {
+                                grid.text(sprintf("%.1f", mat_scale[i, j]), x, y, gp = gpar(fontsize = 10))
+                              })
+    }else{
+      ComplexHeatmap::Heatmap(mat_scale, cluster_columns = F, 
+                              show_row_names = show_row_names,
+                              show_column_names = F,cluster_rows = cluster,
+                              name = "Z-score", row_title = title,
+                              )
+    }
   }
 }
 
@@ -409,8 +443,15 @@ get_df <- function(file,
                    de=F,
                    list=c(),
                    dir="all",
-                   log_crit=c(1,-1)
+                   log_crit=c(1,-1),
+                   with_D=FALSE,
+                   all=FALSE
                    ){
+  if(all==TRUE){
+    df <- readxl::read_xlsx(file.path(data_path, file)) %>% as.data.frame()
+    return(df)
+  }
+  
   if(de==TRUE){
     if(dir=="all"){
       df <- readxl::read_xlsx(file.path(data_path, file)) %>% 
@@ -438,11 +479,20 @@ get_df <- function(file,
     return(df)
     
   } else {
-    df <- readxl::read_xlsx(file.path(data_path, file)) %>% 
-      as.data.frame() %>% 
-      filter(ENSEMBL %in% list) %>% 
-      select(M, SYMBOL) %>% 
-      setNames(c("logFC","gene"))
+    
+    if(with_D==T){
+      df <- readxl::read_xlsx(file.path(data_path, file)) %>% 
+        as.data.frame() %>% 
+        filter(ENSEMBL %in% list) %>% 
+        select(M,D, SYMBOL) %>% 
+        setNames(c("logFC","D","gene"))
+    } else{
+      df <- readxl::read_xlsx(file.path(data_path, file)) %>% 
+        as.data.frame() %>% 
+        filter(ENSEMBL %in% list) %>% 
+        select(M, SYMBOL) %>% 
+        setNames(c("logFC","gene"))
+    }
     
     return(df)
   }
@@ -473,15 +523,40 @@ venn_to_excel <- function(venn_list, name) {
 # get_kegg_list -----------------------------------------------------------
 get_kegg_list <- function(path_name
                           ){
-  # 獲取指定通路的基因列表
+  # 获取指定通路的基因列表
   pathway_df <- KEGGREST::keggGet(path_name)[[1]]
   pathway_genes <- pathway_df$GENE
   cat(c(" -> pathway name:", pathway_df$NAME,"\n"))
-  # 提取基因名
+  # 提取基因名称
   gene_names <- sapply(strsplit(pathway_genes, ";"), `[`, 1)
-  # 刪除奇數索引之元素
+  # 删除奇数索引的元素
   gene_list_even <- gene_names[seq_along(gene_names) %% 2 == 0]
   cat(c(" ->",length(gene_list_even),"genes involved.\n"))
   return(gene_list_even)
 }
 
+# get_anno ----------------------------------------------------------------
+get_anno <- function(list,
+                     file,
+                     id_type){
+  # 檢查 type 是否有效
+  if (!(id_type %in% c("ENSEMBL","SYMBOL"))) {
+    stop("Invalid type. Allowed values are 'ENSEMBL','SYMBOL'.")
+  }
+  # 讀檔獲取df
+  if(id_type=="ENSEMBL"){
+    df <- readxl::read_xlsx(file.path(data_path, file)) %>% 
+      as.data.frame() %>% 
+      filter(ENSEMBL %in% list)
+  } else if(id_type=="SYMBOL"){
+    df <- readxl::read_xlsx(file.path(data_path, file)) %>% 
+      as.data.frame() %>% 
+      filter(SYMBOL %in% list)
+  }
+}
+
+
+# ensembl_to_symbol -------------------------------------------------------
+ensembl_to_symbol <- function(list){
+  df <- gene_df %>% filter(ENSEMBL %in% list) %>% pull(SYMBOL)
+}
