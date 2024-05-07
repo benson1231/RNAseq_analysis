@@ -3,6 +3,7 @@ library(tidyverse)
 library(ComplexHeatmap)
 library(ggVennDiagram)
 library(KEGGREST)
+library(colorRamp2)
 
 source("RNAseq_function.R")
 
@@ -15,16 +16,19 @@ gene_df <- "/Users/benson/Documents/project/RNA-seq1-3/anno_gene.RDS" %>%
 raw_counts_df <- read.csv("/Users/benson/Documents/raw_data/RNA-seq1-3/mycounts_total_f.csv")
 
 # rearrange the order of columns in raw count data
-mycount_df <- raw_counts_df %>% 
-  column_to_rownames(var = "ENSEMBL") %>% 
-  select(.,ip_L_V_L_CON,ip_L_V_L_DMS,ip_L_V_L_AZA,ip_L_V_L_DAC,
-         ip_L_V_L_AS,ip_L_V_L_CO,ip_L_V_L_LCD,ip_L_V_L_HCD,
-         ip_L_V_L_BAP, ip_L_V_L_AS_BAP, ip_L_V_L_CO_BAP,
-         ip_L_V_L_LCD_BAP,ip_L_V_L_HCD_BAP,
-         ip_Y_V_S_CON,ip_Y_V_S_DMS,ip_Y_V_S_AZA,ip_Y_V_S_DAC,
-         ip_Y_V_S_AS,ip_Y_V_S_CO,ip_Y_V_S_LCD,ip_Y_V_S_HCD,
-         ip_Y_V_S_BAP, ip_Y_V_S_AS_BAP, ip_Y_V_S_CO_BAP,
-         ip_Y_V_S_LCD_BAP,ip_Y_V_S_HCD_BAP) 
+# mycount_df <- raw_counts_df %>%
+#   column_to_rownames(var = "ENSEMBL") %>%
+#   select(.,ip_L_V_L_CON,ip_L_V_L_DMS,ip_L_V_L_AZA,ip_L_V_L_DAC,
+#          ip_L_V_L_AS,ip_L_V_L_CO,ip_L_V_L_LCD,ip_L_V_L_HCD,
+#          ip_L_V_L_BAP, ip_L_V_L_AS_BAP, ip_L_V_L_CO_BAP,
+#          ip_L_V_L_LCD_BAP,ip_L_V_L_HCD_BAP,
+#          ip_Y_V_S_CON,ip_Y_V_S_DMS,ip_Y_V_S_AZA,ip_Y_V_S_DAC,
+#          ip_Y_V_S_AS,ip_Y_V_S_CO,ip_Y_V_S_LCD,ip_Y_V_S_HCD,
+#          ip_Y_V_S_BAP, ip_Y_V_S_AS_BAP, ip_Y_V_S_CO_BAP,
+#          ip_Y_V_S_LCD_BAP,ip_Y_V_S_HCD_BAP)
+# saveRDS(mycount_df,"mycount_tmm.RDS")
+mycount_df <- "/Users/benson/Documents/project/RNA-seq1-3/mycount_tmm.RDS" %>% 
+  readRDS()
 
 # df <- raw_counts_df[,grepl("ip_L_V_L|ip_Y_V_S", colnames(mycount_df))]
 
@@ -32,16 +36,18 @@ mycount_df <- raw_counts_df %>%
 data_path <- "/Users/benson/Documents/raw_data/RNA-seq1-3/V"
 draw_heatmap("ip_Y_V_S_CO_0_deg.xlsx",
              groups = "CO",
-             log_crit = 5)
+             log_crit = 7)
 
 # draw heatmap form a list ------------------------------------------------
 list <- c("CYP1A1","CYP1B1","GADD45A","CDKN1A","ATR","MT1T","MT1G","MT1H")
 list <- c("EGFR","ALK","ROS1","BRAF","MET","RET","Her2","KRAS","TP53","PTEN",
           "ERBB2", "HRAS", "NRAS","STK11","NTRK1", "NTRK2","NTRK3")
-mt <- c("MT1M","MT1E","MT1H","MT1A","MT1G","MT2A")
+mt <- c("MT1A", "MT1B", "MT1E", "MT1F", "MT1G", "MT1H", "MT1M", "MT1X","MT2A",
+        "TP53","NFKB1","NQO1","GCLC","MCM2","ALK","NPM1")
+
 draw_from_list(list = mt,
-               groups = "CO",
-               id = "SYMBOL")
+               groups = "CD",
+               id = "SYMBOL",label_num = T,anno = T)
 
 # get DEG list ------------------------------------------------------------
 file_name <- "ip_Y_V_S_CO_0_deg.xlsx"
@@ -115,17 +121,17 @@ ddr_cc <- c("TP53","ATM", "ATR","CHEK1","CHEK2","GADD45A","GADD45B", "GADD45G","
 
 draw_from_list(list = ddr_cc,groups = "CD",id = "SYMBOL",anno = T)
 
-p1 <- draw_from_list(list = ner_list,groups = "CO",
+p1 <- draw_from_list(list = ner_list,groups = "ALL",
                      id = "SYMBOL",title ="NER")
-p2 <- draw_from_list(list = ber_list,groups = "CO",
+p2 <- draw_from_list(list = ber_list,groups = "ALL",
                      id = "SYMBOL",title ="BER",anno = F)
-p3 <- draw_from_list(list = mmr_list,groups = "CO",
+p3 <- draw_from_list(list = mmr_list,groups = "ALL",
                      id = "SYMBOL",title ="MMR",anno = F)
-p4 <- draw_from_list(list = hr_list,groups = "CO",
+p4 <- draw_from_list(list = hr_list,groups = "ALL",
                      id = "SYMBOL",title ="HR",anno = F)
-p5 <- draw_from_list(list = nhej_list,groups = "CO",
+p5 <- draw_from_list(list = nhej_list,groups = "ALL",
                      id = "SYMBOL",title ="NHEJ",anno = F)
-p6 <- draw_from_list(list = fa_list,groups = "CO",
+p6 <- draw_from_list(list = fa_list,groups = "ALL",
                      id = "SYMBOL",title ="FANCONI",anno = F)
 p1 %v% p2 %v% p3 %v% p4 %v% p5 %v% p6
 
@@ -217,11 +223,11 @@ Extended_Modifier <- ADME %>% filter(type=="Extended"& Class=="Modifier") %>% pu
 p1 <- draw_from_list(list = Extended_trans, groups = "ALL",
                      id = "SYMBOL",title ="Transporter", show_row_names = T)
 p2 <- draw_from_list(list = Extended_phase1, groups = "ALL",
-                     id = "SYMBOL",title ="Phase I",anno = T,show_row_names = T)
+                     id = "SYMBOL",title ="Phase I",anno = F,show_row_names = T)
 p3 <- draw_from_list(list = Extended_phase2, groups = "ALL",
-                     id = "SYMBOL",title ="Phase II",anno = T,show_row_names = T)
+                     id = "SYMBOL",title ="Phase II",anno = F,show_row_names = T)
 p4 <- draw_from_list(list = Extended_Modifier, groups = "ALL",
-                     id = "SYMBOL",title ="Modifier",anno = T,show_row_names = T)
+                     id = "SYMBOL",title ="Modifier",anno = F,show_row_names = T)
 p1 %v% p2 %v% p3 %v% p4
 
 
@@ -273,7 +279,7 @@ p1 %v% p2 %v% p3 %v% p4 %v% p5 %v% p6 %v% p7 %v% p8 %v% p9 %v% p10
 p11 %v% p12 %v% p13 %v% p14
 p15 %v% p16 %v% p17 %v% p18 %v% p19
 
-# kegg_list ----------------`Breast -> Breast`t# kegg_list ---------------------------------------------------------------
+# kegg_list ---------------------------------------------------------------
 ### single
 group <- "CO"
 id_num <- 8
