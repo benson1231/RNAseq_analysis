@@ -42,7 +42,7 @@ draw_heatmap("ip_Y_V_S_CO_0_deg.xlsx",
 file_name <- "ip_Y_V_S_CO_0_deg.xlsx"
 k_value <- 3
 draw_heatmap(file_name,
-             groups = "only_CO",
+             groups = "only_CD",
              log_crit = 2,km = 3)
 cluster_result <- draw_heatmap(file_name,
                                groups = "only_CO",
@@ -50,9 +50,9 @@ cluster_result <- draw_heatmap(file_name,
 cluster1 <- names(cluster_result [cluster_result == 1])
 cluster2 <- names(cluster_result [cluster_result == 2])
 cluster3 <- names(cluster_result [cluster_result == 3])
-draw_from_list(list = cluster1,
+draw_from_list(list = cluster2,
                groups = "CO",
-               id = "SYMBOL")
+               id = "SYMBOL",show_row_names = F)
 
 # draw heatmap form a list ------------------------------------------------
 list <- c("CYP1A1","CYP1B1","GADD45A","CDKN1A","ATR","MT1T","MT1G","MT1H")
