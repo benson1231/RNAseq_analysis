@@ -3,9 +3,12 @@
 draw_heatmap <- function(file=file,
                          log_crit=3,
                          groups="ALL",
-                         show_row_names = TRUE,
-                         log_scale=FALSE
-                         ){
+                         show_row_names = FALSE,
+                         log_scale=FALSE,
+                         row_km=T,
+                         km=0,
+                         return_cluster=F
+){
   cat(c(" -> load data from",file.path(data_path, file),"\n"))
   data <- readxl::read_xlsx(file.path(data_path, file)) # 讀檔
   data <- data %>% filter(abs(M)>log_crit,
@@ -22,7 +25,6 @@ draw_heatmap <- function(file=file,
     column_to_rownames(., var = "SYMBOL")
   
   # select groups
-  cat(c(" -> filtering data", "\n"))
   if(groups == "AS"){
     data_mat <- mat %>% select(ip_Y_V_S_CON,ip_Y_V_S_DMS,ip_Y_V_S_AS,ip_Y_V_S_BAP,ip_Y_V_S_AS_BAP)
   } else if(groups == "CO"){
@@ -38,6 +40,17 @@ draw_heatmap <- function(file=file,
                                ip_Y_V_S_AS,ip_Y_V_S_CO,
                                ip_Y_V_S_LCD,ip_Y_V_S_HCD,ip_Y_V_S_BAP,ip_Y_V_S_AS_BAP,
                                ip_Y_V_S_CO_BAP,ip_Y_V_S_LCD_BAP,ip_Y_V_S_HCD_BAP)
+  } else if(groups == "only_CO"){
+    data_mat <- mat %>% select(ip_Y_V_S_CO, ip_Y_V_S_BAP,ip_Y_V_S_CO_BAP)
+  } else if(groups == "only_AS"){
+    data_mat <- mat %>% select(ip_Y_V_S_AS, ip_Y_V_S_BAP,ip_Y_V_S_AS_BAP)
+  } else if(groups == "only_LCD"){
+    data_mat <- mat %>% select(ip_Y_V_S_LCD, ip_Y_V_S_BAP,ip_Y_V_S_LCD_BAP)
+  } else if(groups == "only_HCD"){
+    data_mat <- mat %>% select(ip_Y_V_S_HCD, ip_Y_V_S_BAP,ip_Y_V_S_HCD_BAP)
+  } else if(groups == "only_CD"){
+    data_mat <- mat %>% select(ip_Y_V_S_LCD,ip_Y_V_S_HCD, ip_Y_V_S_BAP,
+                               ip_Y_V_S_LCD_BAP,ip_Y_V_S_HCD)
   } else{
     cat(c("<- check groups", "\n"))
     return(NULL)
@@ -73,13 +86,19 @@ draw_heatmap <- function(file=file,
                                              'LCD_BAP'= '#0000E3', "HCD_BAP"="#000079"),
                                      clone=c('WT'="#FF2D2D",'L858R'="#FF9224",
                                              "DEL19"= "#66B3FF","YAP"="#2828FF")))
+
+  heat <- ComplexHeatmap::Heatmap(mat_scale, top_annotation = ha, cluster_columns = F, 
+                                  show_row_names = show_row_names, 
+                                  show_column_names = F,
+                                  name = "Z-score",row_km = km)
+  cat(c( " ->", nrow(mat_scale), "genes"))
   
-  ComplexHeatmap::Heatmap(mat_scale, top_annotation = ha, cluster_columns = F, 
-                          show_row_names = show_row_names, 
-                          show_column_names = F,
-                          name = "Z-score"
-  )
-  
+  if(return_cluster==T){
+    group = kmeans((mat_scale), centers = 3)$cluster
+    return(group)
+  } else{
+    heat
+  }
 }
 
 # draw_from_list ----------------------------------------------------------
@@ -137,6 +156,17 @@ draw_from_list <- function(list,
                                ip_Y_V_S_AS,ip_Y_V_S_CO,
                                ip_Y_V_S_LCD,ip_Y_V_S_HCD,ip_Y_V_S_BAP,ip_Y_V_S_AS_BAP,
                                ip_Y_V_S_CO_BAP,ip_Y_V_S_LCD_BAP,ip_Y_V_S_HCD_BAP)
+  } else if(groups == "only_CO"){
+    data_mat <- mat %>% select(ip_Y_V_S_CO, ip_Y_V_S_BAP,ip_Y_V_S_CO_BAP)
+  } else if(groups == "only_AS"){
+    data_mat <- mat %>% select(ip_Y_V_S_AS, ip_Y_V_S_BAP,ip_Y_V_S_AS_BAP)
+  } else if(groups == "only_LCD"){
+    data_mat <- mat %>% select(ip_Y_V_S_LCD, ip_Y_V_S_BAP,ip_Y_V_S_LCD_BAP)
+  } else if(groups == "only_HCD"){
+    data_mat <- mat %>% select(ip_Y_V_S_HCD, ip_Y_V_S_BAP,ip_Y_V_S_HCD_BAP)
+  } else if(groups == "only_CD"){
+    data_mat <- mat %>% select(ip_Y_V_S_LCD,ip_Y_V_S_HCD, ip_Y_V_S_BAP,
+                               ip_Y_V_S_LCD_BAP,ip_Y_V_S_HCD)
   } else{
     cat(c("<- please type in groups", "\n"))
     reture(NULL)
