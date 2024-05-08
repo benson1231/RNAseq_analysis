@@ -10,7 +10,9 @@ source("RNAseq_function.R")
 # load annotation data ----------------------------------------------------
 gene_df <- "/Users/benson/Documents/project/RNA-seq1-3/anno_gene.RDS" %>% 
   readRDS() %>%
-  select(ENSEMBL,SYMBOL)
+  select(ENSEMBL,SYMBOL,ENTREZID)
+anno_df <- "/Users/benson/Documents/project/RNA-seq1-3/anno_gene.RDS" %>% 
+  readRDS()
 
 # load raw reads counts ---------------------------------------------------------------
 raw_counts_df <- read.csv("/Users/benson/Documents/raw_data/RNA-seq1-3/mycounts_total_f.csv")
@@ -39,31 +41,36 @@ draw_heatmap("ip_Y_V_S_CO_0_deg.xlsx",
              log_crit = 1)
 
 # cluster analysis --------------------------------------------------------
-file_name <- "ip_Y_V_S_CO_0_deg.xlsx"
-k_value <- 3
+file_name <- "ip_Y_V_S_LCD_BAP_0_deg.xlsx"
+k_value <- 5
 draw_heatmap(file_name,
-             groups = "only_CD",
-             log_crit = 2,km = 3)
+             groups = "only_LCD",
+             log_crit = 1,km = k_value)
 cluster_result <- draw_heatmap(file_name,
-                               groups = "only_CO",
-                               log_crit = 2, row_km = T, km=k_value,return_cluster = T)
+                               groups = "only_LCD",
+                               log_crit = 1, row_km = T, km=k_value,return_cluster = T)
 cluster1 <- names(cluster_result [cluster_result == 1])
 cluster2 <- names(cluster_result [cluster_result == 2])
 cluster3 <- names(cluster_result [cluster_result == 3])
-draw_from_list(list = cluster2,
-               groups = "CO",
-               id = "SYMBOL",show_row_names = F)
+cluster4 <- names(cluster_result [cluster_result == 4])
+cluster5 <- names(cluster_result [cluster_result == 5])
+cluster6 <- names(cluster_result [cluster_result == 6])
+
+writeLines(unlist(cluster3), "my_list.txt")
+draw_from_list(list = cluster3,
+               groups = "only_LCD",
+               id = "SYMBOL",show_row_names = T,title = "C1")
 
 # draw heatmap form a list ------------------------------------------------
 list <- c("CYP1A1","CYP1B1","GADD45A","CDKN1A","ATR","MT1T","MT1G","MT1H")
 list <- c("EGFR","ALK","ROS1","BRAF","MET","RET","Her2","KRAS","TP53","PTEN",
           "ERBB2", "HRAS", "NRAS","STK11","NTRK1", "NTRK2","NTRK3")
 mt <- c("MT1A", "MT1B", "MT1E", "MT1F", "MT1G", "MT1H", "MT1M", "MT1X","MT2A",
-        "TP53","NFKB1","NQO1","GCLC","MCM2","ALK","NPM1")
+        "TP53","NFKB1","NQO1","GCLC","MCM2","ALK","NPM1","YAP1")
 
-draw_from_list(list = clsu,
+draw_from_list(list = de,
                groups = "CO",
-               id = "SYMBOL",label_num = T,anno = T)
+               id = "SYMBOL",label_num = F,anno = T)
 
 # get DEG list ------------------------------------------------------------
 file_name <- "ip_Y_V_S_CO_0_deg.xlsx"
