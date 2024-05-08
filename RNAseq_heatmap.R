@@ -35,10 +35,10 @@ mycount_df <- "/Users/benson/Documents/project/RNA-seq1-3/mycount_tmm.RDS" %>%
 # df <- raw_counts_df[,grepl("ip_L_V_L|ip_Y_V_S", colnames(mycount_df))]
 
 # draw heatmap ---------------------------------------------------
-data_path <- "/Users/benson/Documents/raw_data/RNA-seq1-3/V"
-draw_heatmap("ip_Y_V_S_CO_0_deg.xlsx",
-             groups = "only_CO",
-             log_crit = 1)
+data_path <- "/Users/benson/Documents/raw_data/RNA-seq1-3/Vitro"
+draw_heatmap("ip_Y_V_S_HCD_BAP_0_deg.xlsx",
+             groups = "only_HCD",
+             log_crit = 5,show_row_names = T)
 
 # cluster analysis --------------------------------------------------------
 file_name <- "ip_Y_V_S_LCD_BAP_0_deg.xlsx"
