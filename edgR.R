@@ -7,14 +7,31 @@ library(gplots)
 library(RColorBrewer)
 library(NMF)
 
-# "ip_L_V_L_CON", "ip_L_V_L_DMS", "ip_L_V_L_AZA", "ip_L_V_L_DAC", "ip_L_V_L_AS",
-# "ip_L_V_L_CO", "ip_L_V_L_LCD", "ip_L_V_L_HCD", "ip_L_V_L_BAP", "ip_L_V_L_AS_BAP",
-# "ip_L_V_L_CO_BAP", "ip_L_V_L_LCD_BAP", "ip_L_V_L_HCD_BAP",
+
+# counts ------------------------------------------------------------------
+mycount_77 <- "/Users/benson/Documents/project/RNA-seq1-3/myTMM.RDS" %>% 
+  readRDS() %>% as.data.frame()
+mycount_df <- mycount_77 %>% as.data.frame()%>% 
+  select(.,
+         ip_Y_V_S_CON,ip_Y_V_S_DMS,ip_Y_V_S_AZA,ip_Y_V_S_DAC,
+         ip_Y_V_S_AS,ip_Y_V_S_CO,ip_Y_V_S_LCD,ip_Y_V_S_HCD,
+         ip_Y_V_S_BAP, ip_Y_V_S_AS_BAP, ip_Y_V_S_CO_BAP,
+         ip_Y_V_S_LCD_BAP,ip_Y_V_S_HCD_BAP) %>% 
+  setNames(c("Y_ST_CON","Y_ST_DMS","Y_ST_AZA","Y_ST_DAC",
+             "Y_ST_AS","Y_ST_CO","Y_ST_LCD","Y_ST_HCD",
+             "Y_ST_BAP", "Y_ST_AS_BAP", "Y_ST_CO_BAP",
+             "Y_ST_LCD_BAP","Y_ST_HCD_BAP"))
+sampleinfo <- data.frame(row = names(mycount_df),
+                        sample = names(mycount_df), 
+                        treatment = str_sub(names(mycount_df), start=6),
+                        culture = str_sub(names(mycount_df), start=3,end=4),
+                        cell    = str_sub(names(mycount_df), start=1,end=1)) %>%
+  column_to_rownames('row') 
 # pre load ----------------------------------------------------------------
-group_names <- c("ip_Y_V_S_CON",
-                 "ip_Y_V_S_DMS", "ip_Y_V_S_AZA", "ip_Y_V_S_DAC", "ip_Y_V_S_AS", "ip_Y_V_S_CO",
-                 "ip_Y_V_S_LCD", "ip_Y_V_S_HCD", "ip_Y_V_S_BAP", "ip_Y_V_S_AS_BAP", "ip_Y_V_S_CO_BAP",
-                 "ip_Y_V_S_LCD_BAP", "ip_Y_V_S_HCD_BAP")
+group_names <- c("Y_ST_CON","Y_ST_DMS","Y_ST_AZA","Y_ST_DAC",
+                 "Y_ST_AS","Y_ST_CO","Y_ST_LCD","Y_ST_HCD",
+                 "Y_ST_BAP", "Y_ST_AS_BAP", "Y_ST_CO_BAP",
+                 "Y_ST_LCD_BAP","Y_ST_HCD_BAP")
 
 # anno --------------------------------------------------------------------
 annotation_df <- "/Users/benson/Documents/project/RNA-seq1-3/anno_gene.RDS" %>% 
@@ -47,7 +64,6 @@ title("Boxplots of logCPMs (unnormalised)")
 ### Multidimensional scaling plots
 plotMDS(y,xlab = "PC1",ylab = "PC2",pch = 16)
 
-sampleinfo <- myfactors
 # We specify the option to let us plot two plots side-by-sde
 par(mfrow=c(1,2))
 # Let's set up colour schemes for CellType
