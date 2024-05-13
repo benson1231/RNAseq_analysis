@@ -3,7 +3,9 @@ library(decoupleR)
 library(OmnipathR)
 library(tidyverse)
 library(pheatmap)
+library(ComplexHeatmap)
 library(ggrepel)
+library(colorRamp2)
 
 source("RNAseq_function.R")
 
@@ -126,6 +128,11 @@ ggplot(path, aes(x = log(Average_expression), y = logFC, color = color)) + geom_
   geom_vline(xintercept = 0, linetype = 'dotted') +
   geom_hline(yintercept = 0, linetype = 'dotted') +
   ggtitle(pathway)
+### top50 heatmap
+path_top50 <- path %>% arrange(desc(abs(logFC))) %>% head(50) %>% pull(ID)
+draw_from_list(list = path_top50,
+               groups = "ALL",
+               id = "SYMBOL",label_num = F,anno = T,title = "")
 
 
 ### TFs heatmap -------------------------------------------------------------
@@ -216,7 +223,7 @@ ggplot(f_contrast_TF, aes(x = reorder(source, score), y = score)) +
   xlab("TFs") + ggtitle("")   # change
 
 ### Specific TF related genes -----------------------------------------------
-tf <- 'JUN'   # change
+tf <- 'HIF1A'   # change
 logFC_criteria <- 1    # change
 
 # filter TF related genes
@@ -240,3 +247,8 @@ ggplot(df, aes(x = log(Average_expression), y = logFC, color = color, size=abs(m
   geom_vline(xintercept = 0, linetype = 'dotted') +
   geom_hline(yintercept = 0, linetype = 'dotted') +
   ggtitle(tf)
+### top50 heatmap
+TF_top50 <- df %>% arrange(desc(abs(logFC))) %>% head(50) %>% pull(ID)
+draw_from_list(list = TF_top50,
+               groups = "ALL",
+               id = "SYMBOL",label_num = F,anno = T,title = "")
