@@ -33,7 +33,10 @@ mat <- log10(df) %>% negative()
 ### heatmap
 col_fun = colorRamp2(c(0, 5), c("white", "red"))
 ComplexHeatmap::Heatmap(mat,na_col = "grey",cluster_rows = F,cluster_columns = F,
-                        col = col_fun,)
+                        col = col_fun, name = "-log10(P)" ,
+                        row_names_gp = gpar(fontsize = 7), 
+                        column_names_gp = gpar(fontsize = 10), 
+                        column_names_rot = 45)
 
 
 # details -----------------------------------------------------------------
@@ -62,6 +65,12 @@ df3 <- kk@result[,c(4,8)] %>% filter(p.adjust<0.05) %>% setNames(c("Description"
 ### merge
 df <- df1 %>% full_join(df2,"Description") %>% full_join(df3,"Description") %>% 
   column_to_rownames("Description") %>% as.matrix()
+mat <- log10(df) %>% negative()
 
 ### heatmap
-ComplexHeatmap::Heatmap(df,na_col = "grey",cluster_rows = F,cluster_columns = F)
+col_fun = colorRamp2(c(0, 5), c("white", "red"))
+ComplexHeatmap::Heatmap(mat,na_col = "grey",cluster_rows = F,cluster_columns = F,
+                        col = col_fun, name = "-log10(P)" ,
+                        row_names_gp = gpar(fontsize = 7), 
+                        column_names_gp = gpar(fontsize = 10), 
+                        column_names_rot = 45)
