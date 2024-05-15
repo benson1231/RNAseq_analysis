@@ -292,7 +292,7 @@ draw_from_list <- function(list,
                               })
     }else{
       ComplexHeatmap::Heatmap(mat_scale, top_annotation = ha, cluster_columns = F, 
-                              show_row_names = show_row_names,
+                              show_row_names = show_row_names,col = col_fun,
                               show_column_names = F,cluster_rows = cluster,
                               name = "Z-score", row_title = title
                               )
@@ -300,7 +300,7 @@ draw_from_list <- function(list,
   } else{
     if(label_num==T){
       ComplexHeatmap::Heatmap(mat_scale, cluster_columns = F, 
-                              show_row_names = show_row_names,
+                              show_row_names = show_row_names,col = col_fun,
                               show_column_names = F,cluster_rows = cluster,
                               name = "Z-score", row_title = title,
                               cell_fun = function(j, i, x, y, width, height, fill) {
@@ -308,7 +308,7 @@ draw_from_list <- function(list,
                               })
     }else{
       ComplexHeatmap::Heatmap(mat_scale, cluster_columns = F, 
-                              show_row_names = show_row_names,
+                              show_row_names = show_row_names,col = col_fun,
                               show_column_names = F,cluster_rows = cluster,
                               name = "Z-score", row_title = title,
                               )
@@ -669,3 +669,87 @@ ensembl_to_symbol <- function(list){
 negative <- function(x) {
   return(-x)
 }
+
+# run_keg_path -----------------------------------------------------------
+run_keg_path <- function(file_name, dir="up",log_crit=1){
+  if (!(dir %in% c("up","down"))) {
+    stop("Invalid type. Allowed values are 'up' or 'down'.")
+  }
+  genelist <- get_list(file_name)
+  if(dir=="up"){
+    gene <- names(genelist)[genelist >= log_crit]
+  } else{
+    gene <- names(genelist)[genelist <= negative(log_crit)]
+  }
+  # run kegg ORA
+  message("Running KEGG analysis")
+  kk <- enrichKEGG(gene         = gene,
+                   organism     = 'hsa',
+                   pvalueCutoff = 0.05)
+  # ENTREZID to SYMBOL
+  net <- DOSE::setReadable(kk, 'org.Hs.eg.db', 'ENTREZID')
+  return(net)
+}
+
+# run_reactome ------------------------------------------------------------
+run_reactome <- function(file_name, dir="up",log_crit=1,
+                         return_df = F){
+  if (!(dir %in% c("up","down"))) {
+    stop("Invalid type. Allowed values are 'up' or 'down'.")
+  }
+  genelist <- get_list(file_name)
+  if(dir=="up"){
+    gene <- names(genelist)[genelist >= log_crit]
+  } else{
+    gene <- names(genelist)[genelist <= negative(log_crit)]
+  }
+  # Reactome pathway over-representation analysis
+  message("Running reactome analysis")
+  de_pathway <- enrichPathway(gene=gene, pvalueCutoff = 0.05, readable=TRUE)
+  return(de_pathway)
+}
+# get_p -------------------------------------------------------------------
+get_p <- function(x, group_name, top=10){
+  pvalue <- x@result %>% .[,c("Description","pvalue")] %>% 
+    setNames(c("Description",group_name)) %>% head(top)
+  return(pvalue)
+}
+
+# plot_heatmap ------------------------------------------------------------
+plot_heatmap <- function(file_list, group_names, analysis, title="") {
+  # 檢查參數是否匹配
+  if (length(file_list) != length(group_names)) {
+    stop("file_list and group_names must have the same length")
+  }
+  if (!(analysis %in% c("kegg", "reactome"))) {
+    stop("Invalid type. Allowed values are 'kegg' or 'reactome'.")
+  }
+  # 讀取並處理每個文件
+  if(analysis=="kegg"){
+    dfs <- lapply(file_list, run_keg_path)
+  } else{
+    dfs <- lapply(file_list, run_reactome)
+  }
+  processed_dfs <- mapply(get_p, dfs, group_name = group_names, SIMPLIFY = FALSE)
+  
+  # 合併所有數據框
+  combined_df <- Reduce(function(x, y) full_join(x, y, by = "Description"), processed_dfs) %>% 
+    column_to_rownames("Description") %>% 
+    as.matrix()
+  
+  # 計算 -log10(P) 值
+  mat <- log10(combined_df) %>% -.
+  
+  # 繪製熱圖
+  ComplexHeatmap::Heatmap(mat, 
+                          na_col = "grey", 
+                          cluster_rows = FALSE, 
+                          cluster_columns = FALSE,
+                          col = col_fun, 
+                          name = "-log10(P)",
+                          row_names_gp = gpar(fontsize = 7), 
+                          column_names_gp = gpar(fontsize = 8), 
+                          column_names_rot = 45, 
+                          column_title = title)
+}
+
