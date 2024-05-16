@@ -2,6 +2,7 @@
 library(tidyverse)
 library(clusterProfiler) 
 library(enrichplot)
+library(ReactomePA)
 library(decoupleR)
 library(pathview)
 library(cowplot)
@@ -10,6 +11,8 @@ library(ComplexHeatmap)
 library(ggVennDiagram)
 library(colorRamp2)
 library(KEGGREST)
+library(openxlsx)
+library(ggrepel)
 
 source("RNAseq_function.R")
 
@@ -24,15 +27,14 @@ colors <- rwb_palette(n_colors)
 
 # 3.input raw_count data ----------------------------------------------------
 ### load annotation data
-gene_df <- "/Users/benson/Documents/project/RNA-seq1-3/anno_gene.RDS" %>% 
+gene_df <- "/Users/benson/Documents/project/RNA-seq1-3/data/anno_gene.RDS" %>% 
   readRDS() %>%
   select(ENSEMBL,SYMBOL)
 
 ### load raw reads counts 
-raw_counts_df <- read.csv("/Users/benson/Documents/raw_data/RNA-seq1-3/mycounts_total_f.csv")
-# rearrange the order of columns in raw count data
-mycount_df <- raw_counts_df %>% 
-  column_to_rownames(var = "ENSEMBL") %>% 
+mycount_77 <- "/Users/benson/Documents/project/RNA-seq1-3/data/myTMM.RDS" %>% 
+  readRDS() %>% as.data.frame()
+mycount_df <- mycount_77 %>% 
   select(.,ip_L_V_L_CON,ip_L_V_L_DMS,ip_L_V_L_AZA,ip_L_V_L_DAC,
          ip_L_V_L_AS,ip_L_V_L_CO,ip_L_V_L_LCD,ip_L_V_L_HCD,
          ip_L_V_L_BAP, ip_L_V_L_AS_BAP, ip_L_V_L_CO_BAP,
@@ -40,7 +42,7 @@ mycount_df <- raw_counts_df %>%
          ip_Y_V_S_CON,ip_Y_V_S_DMS,ip_Y_V_S_AZA,ip_Y_V_S_DAC,
          ip_Y_V_S_AS,ip_Y_V_S_CO,ip_Y_V_S_LCD,ip_Y_V_S_HCD,
          ip_Y_V_S_BAP, ip_Y_V_S_AS_BAP, ip_Y_V_S_CO_BAP,
-         ip_Y_V_S_LCD_BAP,ip_Y_V_S_HCD_BAP) 
+         ip_Y_V_S_LCD_BAP,ip_Y_V_S_HCD_BAP)
 # count for decoupleR
 count <- mycount_df %>% 
   rownames_to_column("ENSEMBL") %>% 
@@ -88,10 +90,10 @@ dotplot(keg, showCategory = 10, label_format=50,
   facet_grid(.~.sign)
 ### Gene-Concept Network
 net <- DOSE::setReadable(keg, 'org.Hs.eg.db', 'ENTREZID') # convert gene ID to Symbol
-# View(net@result)
+# View(net@result %>% rownames_to_column("pathway_ID"))
 cnetplot(net, categorySize="pvalue", 
-         showCategory = net@result$Description[c(4,5,18,39)],  # change
-         color.params = list(foldChange = net@geneList#[abs(net@geneList)>1]  # change
+         showCategory = net@result$Description[c(1)],  # change
+         color.params = list(foldChange = net@geneList[abs(net@geneList)>1]  # change
          )) +
   scale_color_gradientn(name = "logFC", colors=colors, 
                         na.value = "#E5C494", limits = c(-2, 2))
@@ -211,8 +213,8 @@ file_name <- "ip_Y_V_S_CO_BAP_0_deg.xlsx"   # change
 # TFs barplot
 run_TF(file_name, title = abb(file_name))
 # TFs specific genes MD plot
-TF <- plot_TF(file_name, "p53", title = abb(file_name))
-ggsave("TF.jpeg")
+TF <- plot_TF(file_name, "HIF1A", title = abb(file_name))
+# ggsave("TF.jpeg")
 # top50 heatmap
 TF_top50 <- TF %>% arrange(desc(abs(logFC))) %>% head(50) %>% pull(ID)
 draw_from_list(list = TF_top50,
