@@ -1,4 +1,10 @@
 # function for visualization of RNA-seq data 
+# abb ---------------------------------------------------------------------
+abb <- function(file){
+  df <- name_df %>% filter(file_name==file) %>% pull(abbreviate)
+  return(df)
+}
+
 # draw_heatmap ------------------------------------------------------------
 draw_heatmap <- function(file=file,
                          log_crit=3,
@@ -142,7 +148,7 @@ draw_heatmap <- function(file=file,
 # draw_from_list ----------------------------------------------------------
 draw_from_list <- function(list,
                            groups="ALL",
-                           id="ENSEMBL",
+                           id="SYMBOL",
                            cluster=TRUE,
                            anno=TRUE,
                            title="",
@@ -249,7 +255,7 @@ draw_from_list <- function(list,
                           'DEL19' = '#BE77FF', 'YAP' = '#6F00D2'))
   } else{
     cat(c("<- please type in groups", "\n"))
-    reture(NULL)
+    return(NULL)
   }
   
   # scaling
@@ -320,7 +326,7 @@ draw_from_list <- function(list,
 get_deg <- function(file=file,
                     log_crit = c(1,-1),
                     dir="all",  # all/up/down
-                    type="ENSEMBL",
+                    type="SYMBOL",
                     top="all"
                     ){
   
@@ -671,7 +677,7 @@ negative <- function(x) {
 }
 
 # run_keg_path -----------------------------------------------------------
-run_keg_path <- function(file_name, dir="up",log_crit=1){
+run_keg_path <- function(file_name, dir="up", log_crit=1){
   if (!(dir %in% c("up","down"))) {
     stop("Invalid type. Allowed values are 'up' or 'down'.")
   }
@@ -685,7 +691,7 @@ run_keg_path <- function(file_name, dir="up",log_crit=1){
   message("Running KEGG analysis")
   kk <- enrichKEGG(gene         = gene,
                    organism     = 'hsa',
-                   pvalueCutoff = 0.05)
+                   pvalueCutoff = 0.1)
   # ENTREZID to SYMBOL
   net <- DOSE::setReadable(kk, 'org.Hs.eg.db', 'ENTREZID')
   return(net)
@@ -705,18 +711,19 @@ run_reactome <- function(file_name, dir="up",log_crit=1,
   }
   # Reactome pathway over-representation analysis
   message("Running reactome analysis")
-  de_pathway <- enrichPathway(gene=gene, pvalueCutoff = 0.05, readable=TRUE)
+  de_pathway <- enrichPathway(gene=gene, pvalueCutoff = 0.1, readable=TRUE)
   return(de_pathway)
 }
 # get_p -------------------------------------------------------------------
-get_p <- function(x, group_name, top=10){
+get_p <- function(x, group_name, top=10, p_value_cutoff = 0.01){
   pvalue <- x@result %>% .[,c("Description","pvalue")] %>% 
+    filter(pvalue < p_value_cutoff) %>% 
     setNames(c("Description",group_name)) %>% head(top)
   return(pvalue)
 }
 
 # plot_heatmap ------------------------------------------------------------
-plot_heatmap <- function(file_list, group_names, analysis, title="") {
+plot_heatmap <- function(file_list, group_names, analysis, dir="up",title="") {
   # 檢查參數是否匹配
   if (length(file_list) != length(group_names)) {
     stop("file_list and group_names must have the same length")
@@ -726,9 +733,9 @@ plot_heatmap <- function(file_list, group_names, analysis, title="") {
   }
   # 讀取並處理每個文件
   if(analysis=="kegg"){
-    dfs <- lapply(file_list, run_keg_path)
+    dfs <- lapply(file_list, function(file) run_keg_path(file, log_crit = 1, dir = dir))
   } else{
-    dfs <- lapply(file_list, run_reactome)
+    dfs <- lapply(file_list, function(file) run_reactome(file, log_crit = 1, dir = dir))
   }
   processed_dfs <- mapply(get_p, dfs, group_name = group_names, SIMPLIFY = FALSE)
   
@@ -741,6 +748,11 @@ plot_heatmap <- function(file_list, group_names, analysis, title="") {
   mat <- log10(combined_df) %>% -.
   
   # 繪製熱圖
+  if(dir=="up"){
+    col_fun = colorRamp2(c(0, 2, 5), c("white","#FFB6C1", "red"))
+  } else{
+    col_fun = colorRamp2(c(0, 5), c("white", "blue"))
+  }
   ComplexHeatmap::Heatmap(mat, 
                           na_col = "grey", 
                           cluster_rows = FALSE, 
@@ -750,6 +762,216 @@ plot_heatmap <- function(file_list, group_names, analysis, title="") {
                           row_names_gp = gpar(fontsize = 7), 
                           column_names_gp = gpar(fontsize = 8), 
                           column_names_rot = 45, 
-                          column_title = title)
+                          column_title = title,
+                          heatmap_legend_param = list(   # 控制color bar在0~5之間
+                            at = c(0, 1, 2, 3, 4, 5),  
+                            labels = c("0", "1", "2", "3", "4", "5")  ))
 }
+
+# run_path_heatmap --------------------------------------------------------
+run_path_heatmap <- function(count){
+  count <- count %>% as.matrix()
+  message("running MLM analysis")
+  sample_acts <- run_mlm(mat=count, net=net, .source='source', .target='target',
+                         .mor='weight', minsize = 5)
+  # Transform to wide matrix
+  sample_acts_mat <- sample_acts %>%
+    pivot_wider(id_cols = 'condition', names_from = 'source',
+                values_from = 'score') %>%
+    column_to_rownames('condition') %>%
+    as.matrix()
+  
+  # Scale per feature
+  sample_acts_mat <- scale(sample_acts_mat)
+  
+  # Choose color palette
+  palette_length = 100
+  my_color = colorRampPalette(c("darkblue", "white","red"))(palette_length)
+  
+  my_breaks <- c(seq(-3, 0, length.out=ceiling(palette_length/2) + 1),
+                 seq(0.05, 3, length.out=floor(palette_length/2)))
+  ### heatmap
+  p <- pheatmap(sample_acts_mat, border_color = NA, color=my_color, breaks = my_breaks)
+  return(p)
+}
+
+# run_TF_heatmap ----------------------------------------------------------
+run_TF_heatmap <- function(count){
+  count <- count %>% as.matrix()
+  message("running ULM analysis")
+  sample_TF <- run_ulm(mat=count, net=net_TF, .source='source', .target='target',
+                       .mor='mor', minsize = 5)
+  # plot
+  n_tfs <- 25
+  # Transform to wide matrix
+  sample_TF_mat <- sample_TF %>%
+    pivot_wider(id_cols = 'condition', names_from = 'source',
+                values_from = 'score') %>%
+    column_to_rownames('condition') %>%
+    as.matrix()
+  
+  # Get top tfs with more variable means across clusters
+  tfs <- sample_TF %>%
+    group_by(source) %>%
+    summarise(std = sd(score)) %>%
+    arrange(-abs(std)) %>%
+    head(n_tfs) %>%
+    pull(source)
+  sample_TF_mat <- sample_TF_mat[,tfs]
+  
+  # Scale per sample
+  sample_TF_mat <- scale(sample_TF_mat)
+  
+  # Choose color palette
+  palette_length = 100
+  my_color = colorRampPalette(c("Darkblue", "white","red"))(palette_length)
+  
+  my_breaks <- c(seq(-3, 0, length.out=ceiling(palette_length/2) + 1),
+                 seq(0.05, 3, length.out=floor(palette_length/2)))
+  
+  ### heatmap
+  pheatmap(sample_TF_mat, border_color = NA, color=my_color, breaks = my_breaks) 
+}
+
+# run_pathway -------------------------------------------------------------
+run_pathway <- function(file_name,title=""){
+  deg_FC <- get_df(file_name ,de=T,log_crit = c(1,-1)) %>% 
+    group_by(gene) %>%
+    summarize(across(where(is.numeric), sum)) %>% na.omit() %>% 
+    column_to_rownames(., var = "gene")
+  
+  ### run MLM analysis
+  message("running MLM analysis")
+  contrast_acts <- run_mlm(mat=deg_FC, net=net, .source='source', .target='target',
+                           .mor='weight', minsize = 5)
+  
+  ### pathway enrich plot
+  ggplot(contrast_acts, aes(x = reorder(source, score), y = score)) + 
+    geom_bar(aes(fill = score), stat = "identity") +
+    scale_fill_gradient2(low = "darkblue", high = "indianred", 
+                         mid = "whitesmoke", midpoint = 0) + 
+    theme_minimal() +
+    theme(axis.title = element_text(face = "bold", size = 12),
+          axis.text.x = 
+            element_text(angle = 45, hjust = 1, size =10, face= "bold"),
+          axis.text.y = element_text(size =10, face= "bold"),
+          panel.grid.major = element_blank(), 
+          panel.grid.minor = element_blank()) +
+    xlab("Pathways") + ggtitle(title)   # change title
+}
+
+# plot_pathway  ----------------------------------------------------------
+plot_pathway <- function(file_name, pathway, title="",logFC_criteria = 1){
+  deg_df <- get_df(file_name ,all = T) %>% group_by(SYMBOL) %>%
+    summarize(across(where(is.numeric), sum)) %>% na.omit() %>% 
+    column_to_rownames(., var = "SYMBOL") %>% 
+    rownames_to_column("ID") %>% 
+    .[,c(1,5,6,7,8)] %>% 
+    setNames(c("ID","treat","control","M","D"))%>% 
+    mutate(Average_expression =(treat+control)/2) %>% 
+    .[,c(1,4,6)] %>% 
+    setNames(c("ID","logFC","Average_expression"))
+  ### filter pathway specific genes
+  path <- net %>%
+    filter(source == pathway) %>%
+    arrange(target) %>%
+    mutate(ID = target, color = "3") %>%
+    column_to_rownames('target') %>% 
+    left_join(deg_df,"ID") %>% 
+    mutate(color = if_else(logFC > logFC_criteria, '1', color)) %>%
+    mutate(color = if_else(logFC < logFC_criteria & logFC > negative(logFC_criteria), '2', color)) %>%   
+    mutate(color = if_else(logFC < negative(logFC_criteria), '3', color)) 
+  ### MD plot
+  p <- ggplot(path, aes(x = log(Average_expression), y = logFC, color = color)) + geom_point() +
+    scale_colour_manual(values = c("red","grey","royalblue3")) +
+    geom_label_repel(aes(label = ID)) + 
+    theme_minimal() +
+    theme(legend.position = "none") +
+    geom_vline(xintercept = 0, linetype = 'dotted') +
+    geom_hline(yintercept = 0, linetype = 'dotted') +
+    ggtitle(paste(title,pathway)) 
+  print(p)
+  return(path)
+}
+
+# run_TF ------------------------------------------------------------------
+run_TF <- function(file_name, title=""){
+  ### two groups comparing TFs
+  de_FC <- get_df(file_name ,de=T) %>% group_by(gene) %>%
+    summarize(across(where(is.numeric), sum)) %>% na.omit() %>% 
+    column_to_rownames(., var = "gene")
+  
+  ### Run ULM
+  contrast_TF <- run_ulm(mat=de_FC[, "logFC", drop=FALSE], net=net_TF, .source='source', .target='target',
+                         .mor='mor', minsize = 5)
+  contrast_TF
+  
+  # Filter top TFs in both signs
+  f_contrast_TF <- contrast_TF %>%
+    mutate(rnk = NA)
+  msk <- f_contrast_TF$score > 0
+  f_contrast_TF[msk, 'rnk'] <- rank(-f_contrast_TF[msk, 'score'])
+  f_contrast_TF[!msk, 'rnk'] <- rank(-abs(f_contrast_TF[!msk, 'score']))
+  tfs <- f_contrast_TF %>%
+    arrange(rnk) %>%
+    head(n_tfs) %>%
+    pull(source)
+  f_contrast_TF <- f_contrast_TF %>%
+    filter(source %in% tfs)
+  
+  ### TF enrich plot
+  ggplot(f_contrast_TF, aes(x = reorder(source, score), y = score)) + 
+    geom_bar(aes(fill = score), stat = "identity") +
+    scale_fill_gradient2(low = "darkblue", high = "indianred", 
+                         mid = "whitesmoke", midpoint = 0) + 
+    theme_minimal() +
+    theme(axis.title = element_text(face = "bold", size = 12),
+          axis.text.x = 
+            element_text(angle = 45, hjust = 1, size =10, face= "bold"),
+          axis.text.y = element_text(size =10, face= "bold"),
+          panel.grid.major = element_blank(), 
+          panel.grid.minor = element_blank()) +
+    xlab("TFs") + ggtitle(title) 
+}
+
+# plot_TF -----------------------------------------------------------------
+plot_TF <- function(file_name, TF, title="", logFC_criteria = 1){
+  de <- get_df(file_name ,all = T) %>% group_by(SYMBOL) %>%
+    summarize(across(where(is.numeric), sum)) %>% na.omit() %>% 
+    column_to_rownames(., var = "SYMBOL") %>% 
+    rownames_to_column("ID") %>% 
+    .[,c(1,5,6,7,8)] %>% 
+    setNames(c("ID","treat","control","M","D"))%>% 
+    mutate(Average_expression =(treat+control)/2) %>% 
+    .[,c(1,4,6)] %>% setNames(c("ID","logFC","Average_expression"))
+  ### Specific TF related genes 
+  tf <- TF 
+  logFC_criteria <- logFC_criteria  
+  
+  # filter TF related genes
+  df <- net_TF %>%
+    filter(source == tf) %>%
+    arrange(target) %>%
+    mutate(ID = target, color = "3") %>%
+    column_to_rownames('target') %>% 
+    left_join(de,"ID") %>% 
+    mutate(color = if_else(logFC > logFC_criteria, '1', color)) %>%
+    mutate(color = if_else(logFC < logFC_criteria & logFC > negative(logFC_criteria), '2', color)) %>%   
+    mutate(color = if_else(logFC < negative(logFC_criteria), '3', color)) 
+  
+  ### MD plot
+  p <- ggplot(df, aes(x = log(Average_expression), y = logFC, color = color, size=abs(mor))) +
+    geom_point() +
+    scale_colour_manual(values = c("red","grey","royalblue3")) +
+    geom_label_repel(aes(label = ID, size=1)) + 
+    theme_minimal() +
+    theme(legend.position = "none") +
+    geom_vline(xintercept = 0, linetype = 'dotted') +
+    geom_hline(yintercept = 0, linetype = 'dotted') +
+    ggtitle(paste(title,tf))
+  print(p)
+  return(df)
+}
+
+
 
