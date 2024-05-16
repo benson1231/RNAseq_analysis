@@ -1,0 +1,235 @@
+# 1.load library for package ----------------------------------------------
+library(tidyverse)
+library(clusterProfiler) 
+library(enrichplot)
+library(decoupleR)
+library(pathview)
+library(cowplot)
+library(DOSE)
+library(ComplexHeatmap)
+library(ggVennDiagram)
+library(colorRamp2)
+library(KEGGREST)
+
+source("RNAseq_function.R")
+
+# 2.setting -----------------------------------------------------------------
+data_path <- "/Users/benson/Documents/raw_data/RNA-seq1-3/Vitro"
+name_df <- read.xlsx("/Users/benson/Documents/project/RNA-seq1-3/data/name.xlsx")
+# color setting
+red_white_blue_colors <- c("blue", "white", "red")
+rwb_palette <- colorRampPalette(red_white_blue_colors)
+n_colors <- 10
+colors <- rwb_palette(n_colors)
+
+# 3.input raw_count data ----------------------------------------------------
+### load annotation data
+gene_df <- "/Users/benson/Documents/project/RNA-seq1-3/anno_gene.RDS" %>% 
+  readRDS() %>%
+  select(ENSEMBL,SYMBOL)
+
+### load raw reads counts 
+raw_counts_df <- read.csv("/Users/benson/Documents/raw_data/RNA-seq1-3/mycounts_total_f.csv")
+# rearrange the order of columns in raw count data
+mycount_df <- raw_counts_df %>% 
+  column_to_rownames(var = "ENSEMBL") %>% 
+  select(.,ip_L_V_L_CON,ip_L_V_L_DMS,ip_L_V_L_AZA,ip_L_V_L_DAC,
+         ip_L_V_L_AS,ip_L_V_L_CO,ip_L_V_L_LCD,ip_L_V_L_HCD,
+         ip_L_V_L_BAP, ip_L_V_L_AS_BAP, ip_L_V_L_CO_BAP,
+         ip_L_V_L_LCD_BAP,ip_L_V_L_HCD_BAP,
+         ip_Y_V_S_CON,ip_Y_V_S_DMS,ip_Y_V_S_AZA,ip_Y_V_S_DAC,
+         ip_Y_V_S_AS,ip_Y_V_S_CO,ip_Y_V_S_LCD,ip_Y_V_S_HCD,
+         ip_Y_V_S_BAP, ip_Y_V_S_AS_BAP, ip_Y_V_S_CO_BAP,
+         ip_Y_V_S_LCD_BAP,ip_Y_V_S_HCD_BAP) 
+# count for decoupleR
+count <- mycount_df %>% 
+  rownames_to_column("ENSEMBL") %>% 
+  left_join(gene_df,"ENSEMBL") %>% 
+  group_by(SYMBOL) %>%
+  summarize(across(where(is.numeric), sum)) %>% na.omit() %>% 
+  column_to_rownames(., var = "SYMBOL")
+
+# 4.ORA ---------------------------------------------------------------------
+### enrichKEGG(KEGG pathway)
+keg_result <- run_keg_path("ip_Y_V_S_CO_BAP_0_deg.xlsx", dir = "up",log_crit = 1)
+# bar plot
+barplot(keg_result, showCategory=10, font.size = 9, x = "GeneRatio", label_format = 40,
+        title = "")   # change
+# bar plot with qscore
+mutate(keg_result, qscore = -log(p.adjust, base=10)) %>% 
+  barplot(., showCategory=10, font.size = 9, x = "qscore", label_format = 40,
+          title = "")   # change
+
+### enrichPathway(Reactome pathway)
+react_result <- run_reactome("ip_Y_V_S_HCD_BAP_0_deg.xlsx",dir = "up")
+# bar plot
+barplot(react_result, showCategory=10, font.size = 9, x = "GeneRatio", label_format = 40,
+        title = "") 
+# bar plot with qscore
+mutate(react_result, qscore = -log(p.adjust, base=10)) %>% 
+  barplot(., showCategory=10, font.size = 9, x = "qscore", label_format = 40,
+          title = "")   # change
+
+# 5. ORA several groups with heatmap -----------------------------------------
+file_list <- c("ip_Y_V_S_CO_0_deg.xlsx", "ip_Y_V_S_BAP_0_deg.xlsx", "ip_Y_V_S_CO_BAP_0_deg.xlsx")
+group_names <- c("CO", "BAP", "CO_BAP")
+### KEGG
+plot_heatmap(file_list, group_names, analysis = "kegg", dir="up", title = "")
+### Reactome
+plot_heatmap(file_list, group_names, analysis = "reactome", dir="up", title = "")
+
+
+# 6.GSEA analysis -----------------------------------------------------------
+### KEGG
+keg <- kegg_run("ip_Y_V_S_HCD_BAP_0_deg.xlsx")  # change
+### dot plot
+dotplot(keg, showCategory = 10, label_format=50, 
+        title = "Enriched Pathways", split=".sign") + 
+  facet_grid(.~.sign)
+### Gene-Concept Network
+net <- DOSE::setReadable(keg, 'org.Hs.eg.db', 'ENTREZID') # convert gene ID to Symbol
+# View(net@result)
+cnetplot(net, categorySize="pvalue", 
+         showCategory = net@result$Description[c(4,5,18,39)],  # change
+         color.params = list(foldChange = net@geneList#[abs(net@geneList)>1]  # change
+         )) +
+  scale_color_gradientn(name = "logFC", colors=colors, 
+                        na.value = "#E5C494", limits = c(-2, 2))
+### GSEA plot
+ID <- 39
+enrichplot::gseaplot2(keg, geneSetID = ID, title = keg$Description[ID])
+### Tree plot
+kmat <- enrichplot::pairwise_termsim(keg)
+treeplot(kmat, cluster.params = list(method = "average"))
+
+# 7.get DEG list ------------------------------------------------------------
+file_name <- "ip_Y_V_S_HCD_BAP_0_deg.xlsx"  # change
+group <- "CD"
+# up_all
+DEG <- get_deg(file_name, log_crit = c(1,-1),dir = "up",type = "SYMBOL")
+draw_from_list(list = DEG, groups = group, id = "SYMBOL", show_row_names = F)
+# up_100
+top <- get_deg(file_name, log_crit = c(1,-1),dir = "up",type = "SYMBOL", top = 100)
+draw_from_list(list = top, groups = group, id = "SYMBOL")
+# down_all
+DEG <- get_deg(file_name, log_crit = c(1,-1),dir = "down",type = "SYMBOL")
+draw_from_list(list = DEG, groups = group, id = "SYMBOL", show_row_names = F)
+# down_100
+top <- get_deg(file_name, log_crit = c(1,-1),dir = "down",type = "SYMBOL", top = 100)
+draw_from_list(list = top, groups = group, id = "SYMBOL")
+
+# 8.heatmap -----------------------------------------------------------------
+# single
+list <- c("CHRNA4", "CHRNB4", "VDR", "PGR", "ALK", "CYP1A1")
+draw_from_list(list =list , groups = "ALL", id = "SYMBOL")
+
+# complex
+list1 <- c("EGFR","ALK","ROS1","BRAF","MET","RET","Her2","KRAS","TP53","PTEN",
+          "ERBB2", "HRAS", "NRAS","STK11","NTRK1", "NTRK2","NTRK3")
+list2 <- c("MT1A", "MT1B", "MT1E", "MT1F", "MT1G", "MT1H", "MT1M", "MT1X","MT2A",
+           "TP53","NFKB1","NQO1","GCLC","MCM2","ALK","NPM1","YAP1","JUN","EGFR")
+p1 <- draw_from_list(list = list1,
+                     groups = "ALL", show_row_names = T,
+                     id = "SYMBOL",label_num = F,anno = T,title = "")
+p2 <- draw_from_list(list = list2,
+                     groups = "ALL", show_row_names = T,
+                     id = "SYMBOL",label_num = F,anno = F,title = "")
+p1 %v% p2
+
+# 9.cluster analysis ------------------------------------------------------
+file_name <- "ip_Y_V_S_CO_BAP_0_deg.xlsx"
+group <- "only_HCD"
+k_value <- 5
+draw_heatmap(file_name, groups = group, log_crit = 1, km = k_value)
+# run cluster analysis
+cluster_result <- draw_heatmap(file_name, groups = group, log_crit = 1, 
+                               row_km = T, km=k_value, return_cluster = T)
+# get cluster gene SYMBOL
+cluster1 <- names(cluster_result [cluster_result == 1])
+cluster2 <- names(cluster_result [cluster_result == 2])
+cluster3 <- names(cluster_result [cluster_result == 3])
+cluster4 <- names(cluster_result [cluster_result == 4])
+cluster5 <- names(cluster_result [cluster_result == 5])
+cluster6 <- names(cluster_result [cluster_result == 6])
+# heatmap with control/DMSO
+p1 <- draw_from_list(cluster1, groups = group,title = "C1")
+p2 <- draw_from_list(cluster2, groups = group,anno = F,title = "C2")
+p3 <- draw_from_list(cluster3, groups = group,anno = F,title = "C3")
+p4 <- draw_from_list(cluster4, groups = group,anno = F,title = "C4")
+p5 <- draw_from_list(cluster5, groups = group,anno = F,title = "C5")
+
+p1 %v% p2 %v% p3 %v% p4 %v% p5
+# gene SYMBOL output
+writeLines(unlist(cluster1), "cluster_genes.txt")
+draw_from_list(list = cluster4, groups = group, id = "SYMBOL",show_row_names = T,
+               title = "C4")
+
+# 10.venn diagram ------------------------------------------------------------
+CO_up <- get_deg("ip_Y_V_S_CO_0_deg.xlsx", log_crit = c(1,-1),dir = "up")
+BAP_up <- get_deg("ip_Y_V_S_BAP_0_deg.xlsx", log_crit = c(1,-1),dir = "up")
+CO_BAP_up <- get_deg("ip_Y_V_S_CO_BAP_0_deg.xlsx", log_crit = c(1,-1),dir = "up")
+# venn diagram list
+venn_list <- list(CO = CO_up,
+                  BAP = BAP_up,
+                  CO_BAP =CO_BAP_up)
+# venn diagram
+ggVennDiagram(venn_list,label_percent_digit = 1,label_alpha = 0) +
+  scale_fill_gradient(low="white",high = "#FF2D2D")
+ggVennDiagram(venn_list,label_percent_digit = 1,label_alpha = 0) +
+  scale_fill_gradient(low="white",high = "#6A6AFF")
+# upset
+ggVennDiagram(venn_list,label_percent_digit = 1,label_alpha = 0, force_upset = T)
+# get venn diagram result(gene list)
+venn_result <- process_region_data(Venn(venn_list))
+venn_result
+draw_from_list(list = venn_result$item[[7]], groups = "CO")
+
+
+# 11.pathway and TFs analysis using decoupleR --------------------------------
+net <- "/Users/benson/Documents/project/RNA-seq1-3/data/net.RDS" %>% readRDS()
+net_TF <- "/Users/benson/Documents/project/RNA-seq1-3/data/net_TF.RDS" %>% readRDS()
+
+### heatmap
+# pathway heatmap
+run_path_heatmap(count)
+# TFs heatmap
+run_TF_heatmap(count)
+
+### pathway for specific group
+file_name <- "ip_Y_V_S_CO_BAP_0_deg.xlsx"   # change
+# pathway barplot
+run_pathway(file_name, title = abb(file_name))
+# pathway specific genes MD plot
+path <- plot_pathway(file_name, "p53", title = abb(file_name))
+# top50 heatmap
+path_top50 <- path %>% arrange(desc(abs(logFC))) %>% head(50) %>% pull(ID)
+draw_from_list(list = path_top50, groups = "CD",
+               id = "SYMBOL",label_num = F,anno = T,title = "")
+
+### TFs for specific group
+file_name <- "ip_Y_V_S_CO_BAP_0_deg.xlsx"   # change
+# TFs barplot
+run_TF(file_name, title = abb(file_name))
+# TFs specific genes MD plot
+TF <- plot_TF(file_name, "p53", title = abb(file_name))
+ggsave("TF.jpeg")
+# top50 heatmap
+TF_top50 <- TF %>% arrange(desc(abs(logFC))) %>% head(50) %>% pull(ID)
+draw_from_list(list = TF_top50,
+               groups = "CO",
+               id = "SYMBOL",label_num = F,anno = T,title = "")
+## for loop
+# for (i in name_df$file_name[29:39]) {
+#   plot_TF(i, "HIF1A", title = abb(i))
+#   ggsave(paste(abb(i),"HIF1A.jpeg"))
+#   dev.off()
+# }
+
+
+
+
+
+
+
+
+
