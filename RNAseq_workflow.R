@@ -13,6 +13,7 @@ library(colorRamp2)
 library(KEGGREST)
 library(openxlsx)
 library(ggrepel)
+library(edgeR)
 
 source("RNAseq_function.R")
 
@@ -44,14 +45,52 @@ mycount_df <- mycount_77 %>%
          ip_Y_V_S_BAP, ip_Y_V_S_AS_BAP, ip_Y_V_S_CO_BAP,
          ip_Y_V_S_LCD_BAP,ip_Y_V_S_HCD_BAP)
 # count for decoupleR
-count <- mycount_df %>% 
+gene_count <- mycount_df %>% 
   rownames_to_column("ENSEMBL") %>% 
   left_join(gene_df,"ENSEMBL") %>% 
   group_by(SYMBOL) %>%
   summarize(across(where(is.numeric), sum)) %>% na.omit() %>% 
   column_to_rownames(., var = "SYMBOL")
 
-# 4.ORA ---------------------------------------------------------------------
+# 4.PCA -------------------------------------------------------------------
+### Create a DGEList object
+y <- DGEList(count) 
+# set factor
+sampleinfo$sample <- factor(sampleinfo$sample)
+sampleinfo$treatment <- factor(sampleinfo$treatment)
+sampleinfo$culture <- factor(sampleinfo$culture)
+sampleinfo$cell <- factor(sampleinfo$cell)
+levels(sampleinfo$sample)
+levels(sampleinfo$treatment)
+levels(sampleinfo$culture)
+levels(sampleinfo$cell)
+# color
+col.sample <- c("black")[sampleinfo$sample]
+col.treatment <- c('#FFE66F','#FFDC35','#FFD2D2','#00DB00','#FF5151','#EA0000',
+                   '#E0E0E0','#FF9797','#ADADAD','#005AB5','#000079','#0080FF',
+                   '#0000E3')[sampleinfo$treatment]
+col.culture <- c("#0072E3","darkblue")[sampleinfo$culture]
+col.cell <- c('#FF9224','#6F00D2')[sampleinfo$cell]
+# sample
+plotMDS(y,col=col.sample ,xlab = "PC1",ylab = "PC2")
+title("sample")
+### treatment(carcinogen)
+plotMDS(y,col=col.treatment,xlab = "PC1",ylab = "PC2")
+legend("topleft",fill=c('#FFE66F','#FFDC35','#FFD2D2','#00DB00','#FF5151','#EA0000',
+                        '#E0E0E0','#FF9797','#ADADAD','#005AB5','#000079','#0080FF',
+                        '#0000E3'),
+       legend=levels(sampleinfo$treatment))
+title("Carcinogen Treatment")
+### culture(long/short-term)
+plotMDS(y,col=col.culture,xlab = "PC1",ylab = "PC2")
+legend("topleft",fill=c("darkblue","#0072E3"),legend=levels(sampleinfo$culture))
+title("Protocol(Short-term/Long-term)")
+### cell type
+plotMDS(y,col=col.cell,xlab = "PC1",ylab = "PC2")
+legend("topleft",fill=c("orange","#6F00D2"),legend=levels(sampleinfo$cell))
+title("Cell type")
+
+# 5.ORA ---------------------------------------------------------------------
 ### enrichKEGG(KEGG pathway)
 keg_result <- run_keg_path("ip_Y_V_S_CO_BAP_0_deg.xlsx", dir = "up",log_crit = 1)
 # bar plot
@@ -72,7 +111,7 @@ mutate(react_result, qscore = -log(p.adjust, base=10)) %>%
   barplot(., showCategory=10, font.size = 9, x = "qscore", label_format = 40,
           title = "")   # change
 
-# 5. ORA several groups with heatmap -----------------------------------------
+# 6. ORA several groups with heatmap -----------------------------------------
 file_list <- c("ip_Y_V_S_CO_0_deg.xlsx", "ip_Y_V_S_BAP_0_deg.xlsx", "ip_Y_V_S_CO_BAP_0_deg.xlsx")
 group_names <- c("CO", "BAP", "CO_BAP")
 ### KEGG
@@ -81,7 +120,7 @@ plot_heatmap(file_list, group_names, analysis = "kegg", dir="up", title = "")
 plot_heatmap(file_list, group_names, analysis = "reactome", dir="up", title = "")
 
 
-# 6.GSEA analysis -----------------------------------------------------------
+# 7.GSEA analysis -----------------------------------------------------------
 ### KEGG
 keg <- kegg_run("ip_Y_V_S_HCD_BAP_0_deg.xlsx")  # change
 ### dot plot
@@ -104,7 +143,7 @@ enrichplot::gseaplot2(keg, geneSetID = ID, title = keg$Description[ID])
 kmat <- enrichplot::pairwise_termsim(keg)
 treeplot(kmat, cluster.params = list(method = "average"))
 
-# 7.get DEG list ------------------------------------------------------------
+# 8.get DEG list ------------------------------------------------------------
 file_name <- "ip_Y_V_S_HCD_BAP_0_deg.xlsx"  # change
 group <- "CD"
 # up_all
@@ -120,7 +159,7 @@ draw_from_list(list = DEG, groups = group, id = "SYMBOL", show_row_names = F)
 top <- get_deg(file_name, log_crit = c(1,-1),dir = "down",type = "SYMBOL", top = 100)
 draw_from_list(list = top, groups = group, id = "SYMBOL")
 
-# 8.heatmap -----------------------------------------------------------------
+# 9.heatmap -----------------------------------------------------------------
 # single
 list <- c("CHRNA4", "CHRNB4", "VDR", "PGR", "ALK", "CYP1A1")
 draw_from_list(list =list , groups = "ALL", id = "SYMBOL")
@@ -138,7 +177,7 @@ p2 <- draw_from_list(list = list2,
                      id = "SYMBOL",label_num = F,anno = F,title = "")
 p1 %v% p2
 
-# 9.cluster analysis ------------------------------------------------------
+# 10.cluster analysis ------------------------------------------------------
 file_name <- "ip_Y_V_S_CO_BAP_0_deg.xlsx"
 group <- "only_HCD"
 k_value <- 5
@@ -166,7 +205,7 @@ writeLines(unlist(cluster1), "cluster_genes.txt")
 draw_from_list(list = cluster4, groups = group, id = "SYMBOL",show_row_names = T,
                title = "C4")
 
-# 10.venn diagram ------------------------------------------------------------
+# 11.venn diagram ------------------------------------------------------------
 CO_up <- get_deg("ip_Y_V_S_CO_0_deg.xlsx", log_crit = c(1,-1),dir = "up")
 BAP_up <- get_deg("ip_Y_V_S_BAP_0_deg.xlsx", log_crit = c(1,-1),dir = "up")
 CO_BAP_up <- get_deg("ip_Y_V_S_CO_BAP_0_deg.xlsx", log_crit = c(1,-1),dir = "up")
@@ -187,15 +226,15 @@ venn_result
 draw_from_list(list = venn_result$item[[7]], groups = "CO")
 
 
-# 11.pathway and TFs analysis using decoupleR --------------------------------
+# 12.pathway and TFs analysis using decoupleR --------------------------------
 net <- "/Users/benson/Documents/project/RNA-seq1-3/data/net.RDS" %>% readRDS()
 net_TF <- "/Users/benson/Documents/project/RNA-seq1-3/data/net_TF.RDS" %>% readRDS()
 
 ### heatmap
 # pathway heatmap
-run_path_heatmap(count)
+run_path_heatmap(gene_count)
 # TFs heatmap
-run_TF_heatmap(count)
+run_TF_heatmap(gene_count)
 
 ### pathway for specific group
 file_name <- "ip_Y_V_S_CO_BAP_0_deg.xlsx"   # change
