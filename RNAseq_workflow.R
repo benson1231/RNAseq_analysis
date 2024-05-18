@@ -36,14 +36,10 @@ gene_df <- "/Users/benson/Documents/project/RNA-seq1-3/data/anno_gene.RDS" %>%
 mycount_77 <- "/Users/benson/Documents/project/RNA-seq1-3/data/myTMM.RDS" %>% 
   readRDS() %>% as.data.frame()
 mycount_df <- mycount_77 %>% 
-  select(.,ip_L_V_L_CON,ip_L_V_L_DMS,ip_L_V_L_AZA,ip_L_V_L_DAC,
-         ip_L_V_L_AS,ip_L_V_L_CO,ip_L_V_L_LCD,ip_L_V_L_HCD,
-         ip_L_V_L_BAP, ip_L_V_L_AS_BAP, ip_L_V_L_CO_BAP,
-         ip_L_V_L_LCD_BAP,ip_L_V_L_HCD_BAP,
-         ip_Y_V_S_CON,ip_Y_V_S_DMS,ip_Y_V_S_AZA,ip_Y_V_S_DAC,
-         ip_Y_V_S_AS,ip_Y_V_S_CO,ip_Y_V_S_LCD,ip_Y_V_S_HCD,
-         ip_Y_V_S_BAP, ip_Y_V_S_AS_BAP, ip_Y_V_S_CO_BAP,
-         ip_Y_V_S_LCD_BAP,ip_Y_V_S_HCD_BAP)
+  select(all_of(name_df$group_name[27:39]))
+abbr_count <- mycount_77 %>% 
+  select(all_of(name_df$group_name[27:39])) %>% 
+  setNames(name_df$abbreviate[27:39])
 # count for decoupleR
 gene_count <- mycount_df %>% 
   rownames_to_column("ENSEMBL") %>% 
@@ -52,7 +48,14 @@ gene_count <- mycount_df %>%
   summarize(across(where(is.numeric), sum)) %>% na.omit() %>% 
   column_to_rownames(., var = "SYMBOL")
 
-# 4.PCA -------------------------------------------------------------------
+# 4.MDS -------------------------------------------------------------------
+### euclidean distance
+euclidean_dist <- dist(t(abbr_count), method = "euclidean")
+distance_matrix <- as.matrix(euclidean_dist)
+
+# euclidean distance heatmap
+ComplexHeatmap::Heatmap(distance_matrix, name = "euclidean_dist")
+
 ### Create a DGEList object
 y <- DGEList(count) 
 # set factor
