@@ -1,4 +1,4 @@
-# 1.load library for package ----------------------------------------------
+# 0.load library for package ----------------------------------------------
 library(tidyverse)
 library(clusterProfiler) 
 library(enrichplot)
@@ -17,7 +17,7 @@ library(edgeR)
 
 source("RNAseq_function.R")
 
-# 2.setting -----------------------------------------------------------------
+# 1.setting -----------------------------------------------------------------
 data_path <- "/Users/benson/Documents/raw_data/RNA-seq1-3/Vitro"
 name_df <- read.xlsx("/Users/benson/Documents/project/RNA-seq1-3/data/name.xlsx")
 # color setting
@@ -26,7 +26,7 @@ rwb_palette <- colorRampPalette(red_white_blue_colors)
 n_colors <- 10
 colors <- rwb_palette(n_colors)
 
-# 3.input raw_count data ----------------------------------------------------
+# 2.input raw_count data ----------------------------------------------------
 ### load annotation data
 gene_df <- "/Users/benson/Documents/project/RNA-seq1-3/data/anno_gene.RDS" %>% 
   readRDS() %>%
@@ -47,6 +47,9 @@ gene_count <- mycount_df %>%
   group_by(SYMBOL) %>%
   summarize(across(where(is.numeric), sum)) %>% na.omit() %>% 
   column_to_rownames(., var = "SYMBOL")
+
+# 3.MD plot -----------------------------------------------------------------
+plot_MD("ip_Y_V_S_HCD_BAP_0_deg.xlsx")
 
 # 4.MDS -------------------------------------------------------------------
 ### euclidean distance
@@ -227,6 +230,11 @@ ggVennDiagram(venn_list,label_percent_digit = 1,label_alpha = 0, force_upset = T
 venn_result <- process_region_data(Venn(venn_list))
 venn_result
 draw_from_list(list = venn_result$item[[7]], groups = "CO")
+
+### use divenn2.0
+get_divenn("ip_Y_V_S_CO_0_deg.xlsx")
+get_divenn("ip_Y_V_S_CO_BAP_0_deg.xlsx")
+# https://divenn.tch.harvard.edu/v2/
 
 
 # 12.pathway and TFs analysis using decoupleR --------------------------------
