@@ -988,10 +988,9 @@ get_divenn <- function(file_name, top=50,output_name="up_down.xlsx"){
       M <= -1 ~ 2 )) %>% 
     filter(., direaction != 3) %>% 
     select(SYMBOL, direaction)
-  
-  write.xlsx(df, "up_down.xlsx")
-  wd <- getwd()
-  cat(c(" -> ",wd,"\n -> ",output_name))
+  output_dir <- output_dir
+  write.xlsx(df, file.path(output_dir,output_name))
+  cat(c(" -> ",output_dir,"\n -> ",output_name))
 }
 
 
