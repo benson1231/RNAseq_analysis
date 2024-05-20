@@ -895,7 +895,7 @@ plot_pathway <- function(file_name, pathway, title="",logFC_criteria = 1){
 }
 
 # run_TF ------------------------------------------------------------------
-run_TF <- function(file_name, title=""){
+run_TF <- function(file_name, title="", n_tfs=25){
   ### two groups comparing TFs
   de_FC <- get_df(file_name ,de=T) %>% group_by(gene) %>%
     summarize(across(where(is.numeric), sum)) %>% na.omit() %>% 
@@ -904,7 +904,6 @@ run_TF <- function(file_name, title=""){
   ### Run ULM
   contrast_TF <- run_ulm(mat=de_FC[, "logFC", drop=FALSE], net=net_TF, .source='source', .target='target',
                          .mor='mor', minsize = 5)
-  contrast_TF
   
   # Filter top TFs in both signs
   f_contrast_TF <- contrast_TF %>%
@@ -975,3 +974,58 @@ plot_TF <- function(file_name, TF, title="", logFC_criteria = 1){
 
 
 
+
+
+# get_divenn --------------------------------------------------------------
+get_divenn <- function(file_name, top=50,output_name="up_down.xlsx"){
+  df <- read.xlsx(file.path(data_path, file_name)) %>% 
+    filter(., geneBiotype==" protein_coding") %>% 
+    arrange(desc(abs(M))) %>% 
+    head(top) %>% 
+    mutate(direaction = case_when(
+      M >= 1 ~ 1,
+      M < 1 & M > -1 ~ 3,
+      M <= -1 ~ 2 )) %>% 
+    filter(., direaction != 3) %>% 
+    select(SYMBOL, direaction)
+  
+  write.xlsx(df, "up_down.xlsx")
+  wd <- getwd()
+  cat(c(" -> ",wd,"\n -> ",output_name))
+}
+
+
+# plot_MD -----------------------------------------------------------------
+plot_MD <- function(file_name, title="", logFC_criteria = 1){
+  df <- get_df(file_name ,all = T) %>% group_by(SYMBOL) %>%
+    filter(.,!(SYMBOL%in% c("havana","ensembl_havana","havana_tagene")),
+           geneBiotype=="protein_coding") %>% 
+    summarize(across(where(is.numeric), sum)) %>% na.omit() %>% 
+    column_to_rownames(., var = "SYMBOL") %>% 
+    rownames_to_column("ID") %>% 
+    .[,c(1,5,6,7,8)] %>% 
+    setNames(c("ID","treat","control","M","D"))%>% 
+    mutate(Average_expression =(treat+control)/2) %>% 
+    .[,c(1,4,6)] %>% setNames(c("ID","logFC","Average_expression")) %>% 
+    mutate(ID = ID, color = "3") %>% 
+    mutate(color = if_else(logFC > logFC_criteria, '1', color)) %>%
+    mutate(color = if_else(logFC < logFC_criteria & logFC > negative(logFC_criteria), '2', color)) %>%   
+    mutate(color = if_else(logFC < negative(logFC_criteria), '3', color))
+  
+  up <- df %>% filter(color==1) %>% nrow()
+  down <- df %>% filter(color==3) %>% nrow()
+  non <- df %>% filter(color==2) %>% nrow()
+  cat(c(" -> up:",up," -> down:",down, " -> non:",non,"\n"))
+  
+  ### MD plot
+  cat("plotting~\n")
+  ggplot(df, aes(x = log(Average_expression), y = logFC, color = color)) +
+    geom_point() +
+    scale_colour_manual(values = c("red","grey","royalblue3")) +
+    geom_label_repel(aes(label = ID, size=1)) + 
+    theme_minimal() +
+    theme(legend.position = "none") +
+    geom_vline(xintercept = 0, linetype = 'dotted') +
+    geom_hline(yintercept = 0, linetype = 'dotted') +
+    ggtitle(title)
+}
