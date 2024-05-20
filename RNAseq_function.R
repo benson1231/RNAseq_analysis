@@ -996,7 +996,7 @@ get_divenn <- function(file_name, top=50,output_name="up_down.xlsx"){
 
 
 # plot_MD -----------------------------------------------------------------
-plot_MD <- function(file_name, title="", logFC_criteria = 1){
+plot_MD <- function(file_name, title="", logFC_criteria = 1, only_DE=F){
   df <- get_df(file_name ,all = T) %>% group_by(SYMBOL) %>%
     filter(.,!(SYMBOL%in% c("havana","ensembl_havana","havana_tagene")),
            geneBiotype=="protein_coding") %>% 
@@ -1009,19 +1009,22 @@ plot_MD <- function(file_name, title="", logFC_criteria = 1){
     .[,c(1,4,6)] %>% setNames(c("ID","logFC","Average_expression")) %>% 
     mutate(ID = ID, color = "3") %>% 
     mutate(color = if_else(logFC > logFC_criteria, '1', color)) %>%
-    mutate(color = if_else(logFC < logFC_criteria & logFC > negative(logFC_criteria), '2', color)) %>%   
-    mutate(color = if_else(logFC < negative(logFC_criteria), '3', color))
+    mutate(color = if_else(logFC < logFC_criteria & logFC > negative(logFC_criteria), '3', color)) %>%   
+    mutate(color = if_else(logFC < negative(logFC_criteria), '2', color))
   
   up <- df %>% filter(color==1) %>% nrow()
-  down <- df %>% filter(color==3) %>% nrow()
-  non <- df %>% filter(color==2) %>% nrow()
+  down <- df %>% filter(color==2) %>% nrow()
+  non <- df %>% filter(color==3) %>% nrow()
   cat(c(" -> up:",up," -> down:",down, " -> non:",non,"\n"))
+  if(only_DE==T){
+    df <- df %>% filter(color==c(1,2))
+  }
   
   ### MD plot
   cat("plotting~\n")
   ggplot(df, aes(x = log(Average_expression), y = logFC, color = color)) +
     geom_point() +
-    scale_colour_manual(values = c("red","grey","royalblue3")) +
+    scale_colour_manual(values = c("red","royalblue3","grey")) +
     geom_label_repel(aes(label = ID, size=1)) + 
     theme_minimal() +
     theme(legend.position = "none") +
