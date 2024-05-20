@@ -49,6 +49,9 @@ gene_count <- mycount_df %>%
   column_to_rownames(., var = "SYMBOL")
 
 # 3.MD plot -----------------------------------------------------------------
+# only DEG
+plot_MD("ip_Y_V_S_CO_BAP_0_deg.xlsx", only_DE = T)
+# with non-significant
 plot_MD("ip_Y_V_S_HCD_BAP_0_deg.xlsx")
 
 # 4.MDS -------------------------------------------------------------------
