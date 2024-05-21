@@ -2,19 +2,20 @@
 library(NOISeq)
 library(tidyverse)
 
+source("RNAseq_function.R")
+
 # input -------------------------------------------------------------------
 ### Chromosome table
-gene_info <- read_table("gene_info.txt")
-mychroms <- gene_info %>% column_to_rownames("ENSEMBL") %>% .[1:3]
-### length list
-mylength <- gene_info$length
-names(mylength) <- gene_info$ENSEMBL
+# gene_info <- read_table(file.path("data","gene_info.txt"))
+# mychroms <- gene_info %>% column_to_rownames("ENSEMBL") %>% .[1:3]
 ### raw count data(no TMM)
-raw_counts_df <- read.csv("/Users/benson/Documents/raw_data/RNA-seq1-3/mycounts_total_f.csv") %>% 
-  .[,-1] %>% column_to_rownames("ENSEMBL") 
-# mycount_df <- "/Users/benson/Documents/project/RNA-seq1-3/mycount_tmm.RDS" %>% 
-#   readRDS()
-# df <- raw_counts_df %>% select(.,ip_L_V_L_CON,ip_L_V_L_DMS,ip_L_V_L_AZA,ip_L_V_L_DAC,
+data <- read.csv("/Users/benson/Documents/raw_data/RNA-seq1-3/ST/df_total.txt") %>% 
+  column_to_rownames("X")
+mylength <- data$length
+names(mylength) <- data$GeneID
+raw_count <- data %>%
+  .[,-c(1,2)]
+# raw_counts_df  <- raw_counts_df %>% select(.,ip_L_V_L_CON,ip_L_V_L_DMS,ip_L_V_L_AZA,ip_L_V_L_DAC,
 #                                ip_L_V_L_AS,ip_L_V_L_CO,ip_L_V_L_LCD,ip_L_V_L_HCD,
 #                                ip_L_V_L_BAP, ip_L_V_L_AS_BAP, ip_L_V_L_CO_BAP,
 #                                ip_L_V_L_LCD_BAP,ip_L_V_L_HCD_BAP,
@@ -24,26 +25,26 @@ raw_counts_df <- read.csv("/Users/benson/Documents/raw_data/RNA-seq1-3/mycounts_
 #                                ip_Y_V_S_LCD_BAP,ip_Y_V_S_HCD_BAP)
 
 # design factor
-myfactors <- data.frame(row = names(raw_counts_df),
-                        sample = names(raw_counts_df), 
-                        treatment = str_sub(names(raw_counts_df), start=10),
-                        culture = str_sub(names(raw_counts_df), start=8,end=8),
-                        cell    = str_sub(names(raw_counts_df), start=4,end=4)) %>%
+myfactors <- data.frame(row = names(mycount_df),
+                        sample = names(mycount_df), 
+                        treatment = str_sub(names(mycount_df), start=10),
+                        culture = str_sub(names(mycount_df), start=8,end=8),
+                        cell    = str_sub(names(mycount_df), start=4,end=4)) %>%
   column_to_rownames('row') 
 
 # without TMM
-mydata_nt <- readData(data=df,chromosome=mychroms, factors=myfactors,length=mylength)
+mydata_nt <- readData(data=mycount_df, factors=myfactors,length=mylength)
 mycountsbio_nt = dat(mydata_nt, factor = NULL, type = "countsbio")
 plot_nt <- explo.plot(mycountsbio_nt, samples = NULL, plottype = "boxplot")
 
 # TMM
-myTMM = tmm(assayData(mydata_nt)$exprs, long = 1000, lc = 0) 
-mydata_tmm <- readData(data=myTMM,chromosome=mychroms, factors=myfactors,length=mylength)
+myTMM = tmm(assayData(mydata_nt)$exprs, long = mylength, lc = 1) 
+mydata_tmm <- readData(data=myTMM, factors=myfactors,length=mylength)
 mycountsbio_tmm = dat(mydata_tmm, factor = NULL, type = "countsbio")
 plot_tmm <- explo.plot(mycountsbio_tmm, samples = NULL, plottype = "boxplot")
 
 # save data
-mycount_df <- myTMM %>% as.data.frame()
+myTMM <- myTMM %>% as.data.frame()
 # saveRDS(myTMM,"myTMM.RDS")
 
 # noiseq ------------------------------------------------------------------
@@ -69,7 +70,7 @@ de <- ddf %>% filter(M>4) %>% pull(SYMBOL)
 # output function ---------------------------------------------------------
 noiseq_group <- function(seq, conditions,factor=factor,filter=c(0,-0)) {
   mresults <- noiseq(seq, factor = factor, k = 0.5, norm = "n", pnr = 0.2,
-                     nss = 5, v = 0.02, lc = 1, replicates = "no",
+                     nss = 5, v = 0.02, lc = 0, replicates = "no",
                      conditions = conditions)
   mnoiseq.deg <- degenes(mresults, q = 0, M = NULL) %>% subset(., M >= filter[1] | M <= filter[2] ) 
   all <- mnoiseq.deg %>% rownames_to_column('ENSEMBL') 
@@ -95,30 +96,22 @@ noiseq_group <- function(seq, conditions,factor=factor,filter=c(0,-0)) {
 
 # output ------------------------------------------------------------------
 # load count df with TMM
-myTMM <- "/Users/benson/Documents/project/RNA-seq1-3/myTMM.RDS" %>% 
-  readRDS() %>% as.data.frame %>% 
-  select(.,ip_L_V_L_CON,ip_L_V_L_DMS,ip_L_V_L_AZA,ip_L_V_L_DAC,
-         ip_L_V_L_AS,ip_L_V_L_CO,ip_L_V_L_LCD,ip_L_V_L_HCD,
-         ip_L_V_L_BAP, ip_L_V_L_AS_BAP, ip_L_V_L_CO_BAP,
-         ip_L_V_L_LCD_BAP,ip_L_V_L_HCD_BAP,
-         ip_Y_V_S_CON,ip_Y_V_S_DMS,ip_Y_V_S_AZA,ip_Y_V_S_DAC,
-         ip_Y_V_S_AS,ip_Y_V_S_CO,ip_Y_V_S_LCD,ip_Y_V_S_HCD,
-         ip_Y_V_S_BAP, ip_Y_V_S_AS_BAP, ip_Y_V_S_CO_BAP,
-         ip_Y_V_S_LCD_BAP,ip_Y_V_S_HCD_BAP)
+myTMM <- "/Users/benson/Documents/project/RNA-seq1-3/data/myTMM.RDS" %>% 
+  readRDS() %>% as.data.frame
 myfactors <- data.frame(row = names(myTMM),
                         sample = names(myTMM), 
                         treatment = str_sub(names(myTMM), start=10),
                         culture = str_sub(names(myTMM), start=8,end=8),
                         cell    = str_sub(names(myTMM), start=4,end=4)) %>%
   column_to_rownames('row') 
-anno_df <- "/Users/benson/Documents/project/RNA-seq1-3/anno_gene.RDS" %>% 
+anno_df <- "/Users/benson/Documents/project/RNA-seq1-3/data/anno_gene.RDS" %>% 
   readRDS()
-mydata_tmm <- readData(data=myTMM,chromosome=mychroms, factors=myfactors,length=mylength)
+mydata_tmm <- readData(data=myTMM, factors=myfactors,length=mylength)
 mycountsbio_tmm = dat(mydata_tmm, factor = NULL, type = "countsbio")
 plot_tmm <- explo.plot(mycountsbio_tmm, samples = NULL, plottype = "boxplot")
 
 # VTN ---------------------------------------------------------------------
-setwd("./Vitro/")
+setwd("./ST/")
 Y_AS <- noiseq_group(seq=mydata_tmm, conditions = c('ip_Y_V_S_AS','ip_Y_V_S_CON'),factor='sample', filter=c(0,-0))
 Y_AZA <- noiseq_group(seq=mydata_tmm, conditions = c('ip_Y_V_S_AZA','ip_Y_V_S_CON'),factor='sample', filter=c(0,-0))
 Y_DAC <- noiseq_group(seq=mydata_tmm, conditions = c('ip_Y_V_S_DAC','ip_Y_V_S_CON'),factor='sample', filter=c(0,-0))
@@ -133,20 +126,44 @@ Y_HCD_B <- noiseq_group(seq=mydata_tmm, conditions = c('ip_Y_V_S_LCD_BAP','ip_Y_
 Y_LCD_B <- noiseq_group(seq=mydata_tmm, conditions = c('ip_Y_V_S_HCD_BAP','ip_Y_V_S_DMS'),factor='sample', filter=c(0,-0))
 
 
-L_AS <- noiseq_group(seq=mydata_tmm, conditions = c('ip_L_V_L_AS','ip_L_V_L_CON'),factor='sample', filter=c(0,-0))
-L_AZA <- noiseq_group(seq=mydata_tmm, conditions = c('ip_L_V_L_AZA','ip_L_V_L_CON'),factor='sample', filter=c(0,-0))
-L_DAC <- noiseq_group(seq=mydata_tmm, conditions = c('ip_L_V_L_DAC','ip_L_V_L_CON'),factor='sample', filter=c(0,-0))
-L_CO <- noiseq_group(seq=mydata_tmm, conditions = c('ip_L_V_L_CO','ip_L_V_L_CON'),factor='sample', filter=c(0,-0))
-L_HCD <- noiseq_group(seq=mydata_tmm, conditions = c('ip_L_V_L_HCD','ip_L_V_L_CON'),factor='sample', filter=c(0,-0))
-L_LCD <- noiseq_group(seq=mydata_tmm, conditions = c('ip_L_V_L_LCD','ip_L_V_L_CON'),factor='sample', filter=c(0,-0))
-L_B<- noiseq_group(seq=mydata_tmm, conditions = c('ip_L_V_L_BAP','ip_L_V_L_DMS'),factor='sample', filter=c(0,-0))
+L_AS <- noiseq_group(seq=mydata_tmm, conditions = c('ip_L_V_S_AS','ip_L_V_S_CON'),factor='sample', filter=c(0,-0))
+L_AZA <- noiseq_group(seq=mydata_tmm, conditions = c('ip_L_V_S_AZA','ip_L_V_S_CON'),factor='sample', filter=c(0,-0))
+L_DAC <- noiseq_group(seq=mydata_tmm, conditions = c('ip_L_V_S_DAC','ip_L_V_S_CON'),factor='sample', filter=c(0,-0))
+L_CO <- noiseq_group(seq=mydata_tmm, conditions = c('ip_L_V_S_CO','ip_L_V_S_CON'),factor='sample', filter=c(0,-0))
+L_HCD <- noiseq_group(seq=mydata_tmm, conditions = c('ip_L_V_S_HCD','ip_L_V_S_CON'),factor='sample', filter=c(0,-0))
+L_LCD <- noiseq_group(seq=mydata_tmm, conditions = c('ip_L_V_S_LCD','ip_L_V_S_CON'),factor='sample', filter=c(0,-0))
+L_B<- noiseq_group(seq=mydata_tmm, conditions = c('ip_L_V_S_BAP','ip_L_V_S_DMS'),factor='sample', filter=c(0,-0))
 
-L_AS_B <- noiseq_group(seq=mydata_tmm, conditions = c('ip_L_V_L_AS_BAP','ip_L_V_L_DMS'),factor='sample', filter=c(0,-0))
-L_CO_B <- noiseq_group(seq=mydata_tmm, conditions = c('ip_L_V_L_CO_BAP','ip_L_V_L_DMS'),factor='sample', filter=c(0,-0))
-L_HCD_B <- noiseq_group(seq=mydata_tmm, conditions = c('ip_L_V_L_LCD_BAP','ip_L_V_L_DMS'),factor='sample', filter=c(0,-0))
-L_LCD_B <- noiseq_group(seq=mydata_tmm, conditions = c('ip_L_V_L_HCD_BAP','ip_L_V_L_DMS'),factor='sample', filter=c(0,-0))
+L_AS_B <- noiseq_group(seq=mydata_tmm, conditions = c('ip_L_V_S_AS_BAP','ip_L_V_S_DMS'),factor='sample', filter=c(0,-0))
+L_CO_B <- noiseq_group(seq=mydata_tmm, conditions = c('ip_L_V_S_CO_BAP','ip_L_V_S_DMS'),factor='sample', filter=c(0,-0))
+L_HCD_B <- noiseq_group(seq=mydata_tmm, conditions = c('ip_L_V_S_LCD_BAP','ip_L_V_S_DMS'),factor='sample', filter=c(0,-0))
+L_LCD_B <- noiseq_group(seq=mydata_tmm, conditions = c('ip_L_V_S_HCD_BAP','ip_L_V_S_DMS'),factor='sample', filter=c(0,-0))
 
+W_AS <- noiseq_group(seq=mydata_tmm, conditions = c('ip_W_V_S_AS','ip_W_V_S_CON'),factor='sample', filter=c(0,-0))
+W_AZA <- noiseq_group(seq=mydata_tmm, conditions = c('ip_W_V_S_AZA','ip_W_V_S_CON'),factor='sample', filter=c(0,-0))
+W_DAC <- noiseq_group(seq=mydata_tmm, conditions = c('ip_W_V_S_DAC','ip_W_V_S_CON'),factor='sample', filter=c(0,-0))
+W_CO <- noiseq_group(seq=mydata_tmm, conditions = c('ip_W_V_S_CO','ip_W_V_S_CON'),factor='sample', filter=c(0,-0))
+W_HCD <- noiseq_group(seq=mydata_tmm, conditions = c('ip_W_V_S_HCD','ip_W_V_S_CON'),factor='sample', filter=c(0,-0))
+W_LCD <- noiseq_group(seq=mydata_tmm, conditions = c('ip_W_V_S_LCD','ip_W_V_S_CON'),factor='sample', filter=c(0,-0))
+W_B<- noiseq_group(seq=mydata_tmm, conditions = c('ip_W_V_S_BAP','ip_W_V_S_DMS'),factor='sample', filter=c(0,-0))
 
+W_AS_B <- noiseq_group(seq=mydata_tmm, conditions = c('ip_W_V_S_AS_BAP','ip_W_V_S_DMS'),factor='sample', filter=c(0,-0))
+W_CO_B <- noiseq_group(seq=mydata_tmm, conditions = c('ip_W_V_S_CO_BAP','ip_W_V_S_DMS'),factor='sample', filter=c(0,-0))
+W_HCD_B <- noiseq_group(seq=mydata_tmm, conditions = c('ip_W_V_S_LCD_BAP','ip_W_V_S_DMS'),factor='sample', filter=c(0,-0))
+W_LCD_B <- noiseq_group(seq=mydata_tmm, conditions = c('ip_W_V_S_HCD_BAP','ip_W_V_S_DMS'),factor='sample', filter=c(0,-0))
+
+D_AS <- noiseq_group(seq=mydata_tmm, conditions = c('ip_D_V_S_AS','ip_D_V_S_CON'),factor='sample', filter=c(0,-0))
+D_AZA <- noiseq_group(seq=mydata_tmm, conditions = c('ip_D_V_S_AZA','ip_D_V_S_CON'),factor='sample', filter=c(0,-0))
+D_DAC <- noiseq_group(seq=mydata_tmm, conditions = c('ip_D_V_S_DAC','ip_D_V_S_CON'),factor='sample', filter=c(0,-0))
+D_CO <- noiseq_group(seq=mydata_tmm, conditions = c('ip_D_V_S_CO','ip_D_V_S_CON'),factor='sample', filter=c(0,-0))
+D_HCD <- noiseq_group(seq=mydata_tmm, conditions = c('ip_D_V_S_HCD','ip_D_V_S_CON'),factor='sample', filter=c(0,-0))
+D_LCD <- noiseq_group(seq=mydata_tmm, conditions = c('ip_D_V_S_LCD','ip_D_V_S_CON'),factor='sample', filter=c(0,-0))
+D_B<- noiseq_group(seq=mydata_tmm, conditions = c('ip_D_V_S_BAP','ip_D_V_S_DMS'),factor='sample', filter=c(0,-0))
+
+D_AS_B <- noiseq_group(seq=mydata_tmm, conditions = c('ip_D_V_S_AS_BAP','ip_D_V_S_DMS'),factor='sample', filter=c(0,-0))
+D_CO_B <- noiseq_group(seq=mydata_tmm, conditions = c('ip_D_V_S_CO_BAP','ip_D_V_S_DMS'),factor='sample', filter=c(0,-0))
+D_HCD_B <- noiseq_group(seq=mydata_tmm, conditions = c('ip_D_V_S_LCD_BAP','ip_D_V_S_DMS'),factor='sample', filter=c(0,-0))
+D_LCD_B <- noiseq_group(seq=mydata_tmm, conditions = c('ip_D_V_S_HCD_BAP','ip_D_V_S_DMS'),factor='sample', filter=c(0,-0))
 # matrigel ----------------------------------------------------------------
 setwd("./Matrigel/")
 #W_1np <- noiseq_group(seq=mydata_tmm, conditions = c('ip_W_M_L_1NP','ip_W_M_L_DMS_S'),factor='sample', filter=c(0.0,-0.0))
