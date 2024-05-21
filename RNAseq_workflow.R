@@ -18,7 +18,8 @@ library(edgeR)
 source("RNAseq_function.R")
 
 # 1.setting -----------------------------------------------------------------
-data_path <- "/Users/benson/Documents/raw_data/RNA-seq1-3/Vitro"
+data_path <- "/Users/benson/Documents/raw_data/RNA-seq1-3/ST"
+output_dir <- "/Users/benson/Documents/project/RNA-seq1-3/output"
 name_df <- read.xlsx("/Users/benson/Documents/project/RNA-seq1-3/data/name.xlsx")
 # color setting
 red_white_blue_colors <- c("blue", "white", "red")
@@ -26,27 +27,34 @@ rwb_palette <- colorRampPalette(red_white_blue_colors)
 n_colors <- 10
 colors <- rwb_palette(n_colors)
 
+AS <- name_df$group_name[c(1,2,5,9,10, 14,15,18,22,23, 27,28,31,35,36, 40,41,44,48,49)]
+CO <- name_df$group_name[c(1,2,6,9,11, 14,15,19,22,24, 27,28,32,35,37, 40,41,45,48,50)]
+LCD <- name_df$group_name[c(1,2,7,9,12, 14,15,20,22,25, 27,28,33,35,38, 40,41,46,48,51)]
+HCD <- name_df$group_name[c(1,2,8,9,13, 14,15,21,22,26, 27,28,34,35,39, 40,41,47,48,52)]
+CD <- name_df$group_name[c(1,2,7,8,9,12,13, 14,15,20,21,22,25,26, 27,28,33,34,35,38,39, 40,41,46,47,48,51,52)]
+BAP <- name_df$group_name[c(1,2,9,10,11,12,13, 14,15,22,23,24,25,26, 27,28,35,36,37,38,39, 40,41,48,49,50,51,52)]
+
+
 # 2.input raw_count data ----------------------------------------------------
 ### load annotation data
 gene_df <- "/Users/benson/Documents/project/RNA-seq1-3/data/anno_gene.RDS" %>% 
   readRDS() %>%
   select(ENSEMBL,SYMBOL)
 
-### load raw reads counts 
-mycount_77 <- "/Users/benson/Documents/project/RNA-seq1-3/data/myTMM.RDS" %>% 
+### load raw reads counts
+logcount <- "/Users/benson/Documents/project/RNA-seq1-3/data/mylogcount.RDS" %>% 
+  readRDS() %>% as.data.frame() %>% select(name_df$group_name) %>% setNames(name_df$abbreviate)
+mycount_df <- "/Users/benson/Documents/project/RNA-seq1-3/data/myTMM.RDS" %>% 
   readRDS() %>% as.data.frame()
-mycount_df <- mycount_77 %>% 
-  select(all_of(name_df$group_name[27:39]))
-abbr_count <- mycount_77 %>% 
-  select(all_of(name_df$group_name[27:39])) %>% 
-  setNames(name_df$abbreviate[27:39])
+abbr_count <- mycount_df %>% select(name_df$group_name) %>% setNames(name_df$abbreviate)
 # count for decoupleR
 gene_count <- mycount_df %>% 
   rownames_to_column("ENSEMBL") %>% 
   left_join(gene_df,"ENSEMBL") %>% 
   group_by(SYMBOL) %>%
   summarize(across(where(is.numeric), sum)) %>% na.omit() %>% 
-  column_to_rownames(., var = "SYMBOL")
+  column_to_rownames(., var = "SYMBOL") %>% 
+  select(name_df$group_name) %>% setNames(name_df$abbreviate)
 
 # 3.MD plot -----------------------------------------------------------------
 # only DEG
@@ -56,14 +64,20 @@ plot_MD("ip_Y_V_S_HCD_BAP_0_deg.xlsx")
 
 # 4.MDS -------------------------------------------------------------------
 ### euclidean distance
-euclidean_dist <- dist(t(abbr_count), method = "euclidean")
-distance_matrix <- as.matrix(euclidean_dist)
+euclidean_dist <- dist(t(logcount), method = "euclidean")
+distance_matrix <- as.matrix(euclidean_dist) 
 
 # euclidean distance heatmap
 ComplexHeatmap::Heatmap(distance_matrix, name = "euclidean_dist")
 
 ### Create a DGEList object
-y <- DGEList(count) 
+y <- DGEList(abbr_count) 
+sampleinfo <- data.frame(row = names(abbr_count),
+                         sample = names(abbr_count), 
+                         treatment = str_sub(names(abbr_count), start=5),
+                         culture = str_sub(names(abbr_count), start=3,end=3),
+                         cell    = str_sub(names(abbr_count), start=1,end=1)) %>%
+  column_to_rownames('row') 
 # set factor
 sampleinfo$sample <- factor(sampleinfo$sample)
 sampleinfo$treatment <- factor(sampleinfo$treatment)
@@ -79,29 +93,29 @@ col.treatment <- c('#FFE66F','#FFDC35','#FFD2D2','#00DB00','#FF5151','#EA0000',
                    '#E0E0E0','#FF9797','#ADADAD','#005AB5','#000079','#0080FF',
                    '#0000E3')[sampleinfo$treatment]
 col.culture <- c("#0072E3","darkblue")[sampleinfo$culture]
-col.cell <- c('#FF9224','#6F00D2')[sampleinfo$cell]
+col.cell <- c('#F4A7B7','#FBE251','#A5DEE4','#C1328E')[sampleinfo$cell]
 # sample
-plotMDS(y,col=col.sample ,xlab = "PC1",ylab = "PC2")
+plotMDS(y,col=col.sample ,xlab = "Dimension 1",ylab = "Dimension 2")
 title("sample")
 ### treatment(carcinogen)
-plotMDS(y,col=col.treatment,xlab = "PC1",ylab = "PC2")
+plotMDS(y,col=col.treatment,xlab = "Dimension 1",ylab = "Dimension 2")
 legend("topleft",fill=c('#FFE66F','#FFDC35','#FFD2D2','#00DB00','#FF5151','#EA0000',
                         '#E0E0E0','#FF9797','#ADADAD','#005AB5','#000079','#0080FF',
                         '#0000E3'),
        legend=levels(sampleinfo$treatment))
 title("Carcinogen Treatment")
 ### culture(long/short-term)
-plotMDS(y,col=col.culture,xlab = "PC1",ylab = "PC2")
+plotMDS(y,col=col.culture,xlab = "Dimension 1",ylab = "Dimension 2")
 legend("topleft",fill=c("darkblue","#0072E3"),legend=levels(sampleinfo$culture))
 title("Protocol(Short-term/Long-term)")
 ### cell type
-plotMDS(y,col=col.cell,xlab = "PC1",ylab = "PC2")
-legend("topleft",fill=c("orange","#6F00D2"),legend=levels(sampleinfo$cell))
+plotMDS(y,col=col.cell,xlab = "Dimension 1",ylab = "Dimension 2")
+legend("topleft",fill=c("#F4A7B7","#FBE251",'#A5DEE4','#C1328E'),legend=levels(sampleinfo$cell))
 title("Cell type")
 
 # 5.ORA ---------------------------------------------------------------------
 ### enrichKEGG(KEGG pathway)
-keg_result <- run_keg_path("ip_Y_V_S_CO_BAP_0_deg.xlsx", dir = "up",log_crit = 1)
+keg_result <- run_keg_path("ip_D_V_S_HCD_0_deg.xlsx", dir = "up",log_crit = 1)
 # bar plot
 barplot(keg_result, showCategory=10, font.size = 9, x = "GeneRatio", label_format = 40,
         title = "")   # change
@@ -111,7 +125,7 @@ mutate(keg_result, qscore = -log(p.adjust, base=10)) %>%
           title = "")   # change
 
 ### enrichPathway(Reactome pathway)
-react_result <- run_reactome("ip_Y_V_S_HCD_BAP_0_deg.xlsx",dir = "up")
+react_result <- run_reactome("ip_D_V_S_HCD_0_deg.xlsx",dir = "up")
 # bar plot
 barplot(react_result, showCategory=10, font.size = 9, x = "GeneRatio", label_format = 40,
         title = "") 
@@ -121,8 +135,8 @@ mutate(react_result, qscore = -log(p.adjust, base=10)) %>%
           title = "")   # change
 
 # 6. ORA several groups with heatmap -----------------------------------------
-file_list <- c("ip_Y_V_S_CO_0_deg.xlsx", "ip_Y_V_S_BAP_0_deg.xlsx", "ip_Y_V_S_CO_BAP_0_deg.xlsx")
-group_names <- c("CO", "BAP", "CO_BAP")
+file_list <- c("ip_W_V_S_HCD_0_deg.xlsx", "ip_D_V_S_HCD_0_deg.xlsx", "ip_Y_V_S_HCD_0_deg.xlsx","ip_L_V_S_HCD_0_deg.xlsx")
+group_names <- c("WT", "Del19", "YAP","L858R")
 ### KEGG
 plot_heatmap(file_list, group_names, analysis = "kegg", dir="up", title = "")
 ### Reactome
@@ -131,7 +145,7 @@ plot_heatmap(file_list, group_names, analysis = "reactome", dir="up", title = ""
 
 # 7.GSEA analysis -----------------------------------------------------------
 ### KEGG
-keg <- kegg_run("ip_Y_V_S_HCD_BAP_0_deg.xlsx")  # change
+keg <- kegg_run("ip_D_V_S_HCD_0_deg.xlsx")  # change
 ### dot plot
 dotplot(keg, showCategory = 10, label_format=50, 
         title = "Enriched Pathways", split=".sign") + 
@@ -140,13 +154,13 @@ dotplot(keg, showCategory = 10, label_format=50,
 net <- DOSE::setReadable(keg, 'org.Hs.eg.db', 'ENTREZID') # convert gene ID to Symbol
 # View(net@result %>% rownames_to_column("pathway_ID"))
 cnetplot(net, categorySize="pvalue", 
-         showCategory = net@result$Description[c(1)],  # change
+         showCategory = net@result$Description[c(16)],  # change
          color.params = list(foldChange = net@geneList[abs(net@geneList)>1]  # change
          )) +
   scale_color_gradientn(name = "logFC", colors=colors, 
                         na.value = "#E5C494", limits = c(-2, 2))
 ### GSEA plot
-ID <- 39
+ID <- 16
 enrichplot::gseaplot2(keg, geneSetID = ID, title = keg$Description[ID])
 ### Tree plot
 kmat <- enrichplot::pairwise_termsim(keg)
@@ -170,8 +184,9 @@ draw_from_list(list = top, groups = group, id = "SYMBOL")
 
 # 9.heatmap -----------------------------------------------------------------
 # single
-list <- c("CHRNA4", "CHRNB4", "VDR", "PGR", "ALK", "CYP1A1")
-draw_from_list(list =list , groups = "ALL", id = "SYMBOL")
+list <- c("CHRNA4", "CHRNB4", "VDR", "PGR", "ALKBH4", "CYP1A1", "CYP1B1","HIF1A","YAP1")
+list <- c("GADD45B","FHIT","CDKN1A","GADD45G","BAD","HRAS","BAX","MAP2K2","CDK4","AKT1")
+draw_from_list(list =list , groups = "CD", id = "SYMBOL")
 
 # complex
 list1 <- c("EGFR","ALK","ROS1","BRAF","MET","RET","Her2","KRAS","TP53","PTEN",
@@ -210,7 +225,7 @@ p5 <- draw_from_list(cluster5, groups = group,anno = F,title = "C5")
 
 p1 %v% p2 %v% p3 %v% p4 %v% p5
 # gene SYMBOL output
-writeLines(unlist(cluster1), "cluster_genes.txt")
+writeLines(unlist(cluster1), file.path(output_dir,"cluster_genes.txt"))
 draw_from_list(list = cluster4, groups = group, id = "SYMBOL",show_row_names = T,
                title = "C4")
 
@@ -235,8 +250,8 @@ venn_result
 draw_from_list(list = venn_result$item[[7]], groups = "CO")
 
 ### use divenn2.0
-get_divenn("ip_Y_V_S_CO_0_deg.xlsx")
-get_divenn("ip_Y_V_S_CO_BAP_0_deg.xlsx")
+get_divenn("ip_Y_V_S_CO_0_deg.xlsx",output_name = "CO.xlsx")
+get_divenn("ip_Y_V_S_CO_BAP_0_deg.xlsx",output_name = "CO_BAP.xlsx")
 # https://divenn.tch.harvard.edu/v2/
 
 
@@ -251,32 +266,32 @@ run_path_heatmap(gene_count)
 run_TF_heatmap(gene_count)
 
 ### pathway for specific group
-file_name <- "ip_Y_V_S_CO_BAP_0_deg.xlsx"   # change
+file_name <- "ip_D_V_S_HCD_0_deg.xlsx"   # change
 # pathway barplot
 run_pathway(file_name, title = abb(file_name))
 # pathway specific genes MD plot
-path <- plot_pathway(file_name, "p53", title = abb(file_name))
+path <- plot_pathway(file_name, "Hypoxia", title = abb(file_name))
 # top50 heatmap
 path_top50 <- path %>% arrange(desc(abs(logFC))) %>% head(50) %>% pull(ID)
 draw_from_list(list = path_top50, groups = "CD",
                id = "SYMBOL",label_num = F,anno = T,title = "")
 
 ### TFs for specific group
-file_name <- "ip_Y_V_S_CO_BAP_0_deg.xlsx"   # change
+file_name <- "ip_W_V_S_AS_BAP_0_deg.xlsx"   # change
 # TFs barplot
 run_TF(file_name, title = abb(file_name))
 # TFs specific genes MD plot
-TF <- plot_TF(file_name, "HIF1A", title = abb(file_name))
+TF <- plot_TF(file_name, "SP1", title = abb(file_name))
 # ggsave("TF.jpeg")
 # top50 heatmap
 TF_top50 <- TF %>% arrange(desc(abs(logFC))) %>% head(50) %>% pull(ID)
 draw_from_list(list = TF_top50,
                groups = "CO",
                id = "SYMBOL",label_num = F,anno = T,title = "")
-## for loop
+# # for loop
 # for (i in name_df$file_name[29:39]) {
 #   plot_TF(i, "HIF1A", title = abb(i))
-#   ggsave(paste(abb(i),"HIF1A.jpeg"))
+#   ggsave(paste(abb(i),file.path(output_dir,"HIF1A.jpeg")))
 #   dev.off()
 # }
 
