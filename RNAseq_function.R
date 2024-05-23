@@ -1,23 +1,36 @@
-# function for visualization of RNA-seq data 
+# function for RNA-seq data 
 # abb ---------------------------------------------------------------------
-abb <- function(file){
-  df <- name_df %>% filter(file_name==file) %>% pull(abbreviate)
+abb <- function(name,type="group"){
+  if(!(type%in%c("file","group"))){
+    stop("'type' must be 'file' or 'group'")
+  }
+  if(type=="file"){
+    df <- name_df %>% filter(file_name==name) %>% pull(abbreviate)
+  } else{
+    df <- name_df %>% filter(group_name==name) %>% pull(abbreviate)
+  }
   return(df)
 }
 
-
-# filter_gene -------------------------------------------------------------
-filter_gene <- function(file_name){
-  df <- readxl::read_xlsx(file.path(data_path, file_name))
-  sum <- df[,c(1,10:11)] %>% column_to_rownames("ENSEMBL") %>% 
-    setNames(c("group1","group2")) %>% 
-    mutate("avg" = (group1 + group2)/2) %>% 
-    mutate("g1"=group1 > 1) %>% 
-    mutate("g2"=group2 > 1) %>% 
-    filter(avg > 2)
-  df <- df %>% filter(ENSEMBL %in% rownames(sum)) 
-  return(df)
+# force_list --------------------------------------------------------------
+force_list <- function(x){
+  input_string <- x
+  output_list <- unlist(strsplit(input_string, split = "/"))
+  return(output_list)
 }
+
+# # filter_gene -------------------------------------------------------------
+# filter_gene <- function(file_name){
+#   df <- readxl::read_xlsx(file.path(data_path, file_name))
+#   sum <- df[,c(1,10:11)] %>% column_to_rownames("ENSEMBL") %>% 
+#     setNames(c("group1","group2")) %>% 
+#     mutate("avg" = (group1 + group2)/2) %>% 
+#     mutate("g1"=group1 > 1) %>% 
+#     mutate("g2"=group2 > 1) %>% 
+#     filter(avg > 2)
+#   df <- df %>% filter(ENSEMBL %in% rownames(sum)) 
+#   return(df)
+# }
 
 # draw_heatmap ------------------------------------------------------------
 draw_heatmap <- function(file=file,
@@ -30,6 +43,11 @@ draw_heatmap <- function(file=file,
                          return_cluster=F,
                          title=""
                          ){
+  if(!(groups%in%c("AS","CO","LCD","HCD","CD","BAP","only_AS","only_CO",
+                  "only_LCD","only_HCD","only_CD","CON","ALL"))){
+    stop('"groups" must be "AS","CO","LCD","HCD","CD","BAP","only_AS","only_CO",
+         "only_LCD","only_HCD","only_CD","CON" or "ALL".')
+  }
   cat(c(" -> load data from",file.path(data_path, file),"\n"))
   data <- readxl::read_xlsx(file.path(data_path, file)) # 讀檔
   data <- data %>% filter(abs(M)>log_crit,
@@ -47,70 +65,72 @@ draw_heatmap <- function(file=file,
   
   # select groups
   if(groups == "AS"){
-    data_mat <- mat %>% select(all_of(AS))
-    anno <- list(agent = c('CON' = '#E0E0E0', 'DMS' = '#ADADAD', 'AS' = '#FFFF37',
-                           'BAP' = '#00DB00', 'AS_BAP' = '#FFDC35'),
-                 clone = c('WT' = '#A5DEE4', 'L858R' = '#FBE251',
-                           'DEL19' = '#F4A7B7', 'YAP' = '#FF1493'))
+    data_mat <- mat %>% select(all_of(name_df$group_name[AS]))
+    ann <- list(agent = c('CON' = '#E0E0E0', 'DMS' = '#ADADAD', 'AS' = '#FFFF37',
+                          'BAP' = '#00DB00', 'AS_BAP' = '#FFDC35'),
+                clone = c('WT' = '#A5DEE4', 'L858R' = '#FBE251',
+                          'DEL19' = '#F4A7B7', 'YAP' = '#FF1493'))
   } else if(groups == "CO"){
-    data_mat <- mat %>% select(all_of(CO))
-    anno <- list(agent = c('CON' = '#E0E0E0', 'DMS' = '#ADADAD', 'CO' = '#FF5151',
-                           'BAP' = '#00DB00', 'CO_BAP' = '#EA0000'),
-                 clone = c('WT' = '#A5DEE4', 'L858R' = '#FBE251',
-                           'DEL19' = '#F4A7B7', 'YAP' = '#FF1493'))
+    data_mat <- mat %>% select(all_of(name_df$group_name[CO]))
+    ann <- list(agent = c('CON' = '#E0E0E0', 'DMS' = '#ADADAD', 'CO' = '#FF5151',
+                          'BAP' = '#00DB00', 'CO_BAP' = '#EA0000'),
+                clone = c('WT' = '#A5DEE4', 'L858R' = '#FBE251',
+                          'DEL19' = '#F4A7B7', 'YAP' = '#FF1493'))
   } else if(groups == "CD"){
-    data_mat <- mat %>% select(all_of(CD))
-    anno <- list(agent = c('CON' = '#E0E0E0', 'DMS' = '#ADADAD', 'LCD' = '#0080FF',
-                           'HCD' = '#005AB5', 'BAP' = '#00DB00',
-                           'LCD_BAP' = '#0000E3', 'HCD_BAP' = '#000079'),
-                 clone = c('WT' = '#A5DEE4', 'L858R' = '#FBE251',
-                           'DEL19' = '#F4A7B7', 'YAP' = '#FF1493'))
+    data_mat <- mat %>% select(all_of(name_df$group_name[CD]))
+    ann <- list(agent = c('CON' = '#E0E0E0', 'DMS' = '#ADADAD', 'LCD' = '#0080FF',
+                          'HCD' = '#005AB5', 'BAP' = '#00DB00',
+                          'LCD_BAP' = '#0000E3', 'HCD_BAP' = '#000079'),
+                clone = c('WT' = '#A5DEE4', 'L858R' = '#FBE251',
+                          'DEL19' = '#F4A7B7', 'YAP' = '#FF1493'))
   } else if(groups == "BAP"){
-    data_mat <- mat %>% select(all_of(BAP))
-    anno <- list(agent = c('CON' = '#E0E0E0', 'DMS' = '#ADADAD', 'BAP' = '#00DB00',
-                           'AS_BAP' = '#FFDC35', 'CO_BAP' = '#EA0000',
-                           'LCD_BAP' = '#0000E3', 'HCD_BAP' = '#000079'),
-                 clone = c('WT' = '#A5DEE4', 'L858R' = '#FBE251',
-                           'DEL19' = '#F4A7B7', 'YAP' = '#FF1493'))
+    data_mat <- mat %>% select(all_of(name_df$group_name[BAP]))
+    ann <- list(agent = c('CON' = '#E0E0E0', 'DMS' = '#ADADAD', 'BAP' = '#00DB00',
+                          'AS_BAP' = '#FFDC35', 'CO_BAP' = '#EA0000',
+                          'LCD_BAP' = '#0000E3', 'HCD_BAP' = '#000079'),
+                clone = c('WT' = '#A5DEE4', 'L858R' = '#FBE251',
+                          'DEL19' = '#F4A7B7', 'YAP' = '#FF1493'))
   } else if(groups == "ALL"){
     data_mat <- mat %>% select(all_of(name_df$group_name))
-    anno <- list(agent = c('CON' = '#E0E0E0', 'DMS' = '#ADADAD', 'AZA' = '#FFD2D2', 'DAC' = '#FF9797',
-                           'AS' = '#FFFF37', 'CO' = '#FF5151',
-                           'LCD' = '#0080FF', 'HCD' = '#005AB5', 'BAP' = '#00DB00',
-                           'AS_BAP' = '#FFDC35', 'CO_BAP' = '#EA0000',
-                           'LCD_BAP' = '#0000E3', 'HCD_BAP' = '#000079'),
-                 clone = c('WT' = '#A5DEE4', 'L858R' = '#FBE251',
-                           'DEL19' = '#F4A7B7', 'YAP' = '#FF1493'))
+    ann <- list(agent = c('CON' = '#E0E0E0', 'DMS' = '#ADADAD', 'AZA' = '#FFD2D2', 'DAC' = '#FF9797',
+                          'AS' = '#FFFF37', 'CO' = '#FF5151',
+                          'LCD' = '#0080FF', 'HCD' = '#005AB5', 'BAP' = '#00DB00',
+                          'AS_BAP' = '#FFDC35', 'CO_BAP' = '#EA0000',
+                          'LCD_BAP' = '#0000E3', 'HCD_BAP' = '#000079'),
+                clone = c('WT' = '#A5DEE4', 'L858R' = '#FBE251',
+                          'DEL19' = '#F4A7B7', 'YAP' = '#FF1493'))
   } else if(groups == "only_CO"){
-    data_mat <- mat %>% select(ip_Y_V_S_CO, ip_Y_V_S_BAP, ip_Y_V_S_CO_BAP)
-    anno <- list(agent = c('CO' = '#FF5151', 'BAP' = '#00DB00', 'CO_BAP' = '#EA0000'),
-                 clone = c('WT' = '#A5DEE4', 'L858R' = '#FBE251',
-                           'DEL19' = '#F4A7B7', 'YAP' = '#FF1493'))
+    data_mat <- mat %>% select(all_of(name_df$group_name[only_CO]))
+    ann <- list(agent = c('CO' = '#FF5151', 'BAP' = '#00DB00', 'CO_BAP' = '#EA0000'),
+                clone = c('WT' = '#A5DEE4', 'L858R' = '#FBE251',
+                          'DEL19' = '#F4A7B7', 'YAP' = '#FF1493'))
   } else if(groups == "only_AS"){
-    data_mat <- mat %>% select(ip_Y_V_S_AS, ip_Y_V_S_BAP, ip_Y_V_S_AS_BAP)
-    anno <- list(agent = c('AS' = '#FFFF37', 'BAP' = '#00DB00', 'AS_BAP' = '#FFDC35'),
-                 clone = c('WT' = '#A5DEE4', 'L858R' = '#FBE251',
-                           'DEL19' = '#F4A7B7', 'YAP' = '#FF1493'))
+    data_mat <- mat %>% select(all_of(name_df$group_name[only_AS]))
+    ann <- list(agent = c('AS' = '#FFFF37', 'BAP' = '#00DB00', 'AS_BAP' = '#FFDC35'),
+                clone = c('WT' = '#A5DEE4', 'L858R' = '#FBE251',
+                          'DEL19' = '#F4A7B7', 'YAP' = '#FF1493'))
   } else if(groups == "only_LCD"){
-    data_mat <- mat %>% select(ip_Y_V_S_LCD, ip_Y_V_S_BAP, ip_Y_V_S_LCD_BAP)
-    anno <- list(agent = c('LCD' = '#0080FF', 'BAP' = '#00DB00', 'LCD_BAP' = '#0000E3'),
-                 clone = c('WT' = '#A5DEE4', 'L858R' = '#FBE251',
-                           'DEL19' = '#F4A7B7', 'YAP' = '#FF1493'))
+    data_mat <- mat %>% select(all_of(name_df$group_name[only_LCD]))
+    ann <- list(agent = c('LCD' = '#0080FF', 'BAP' = '#00DB00', 'LCD_BAP' = '#0000E3'),
+                clone = c('WT' = '#A5DEE4', 'L858R' = '#FBE251',
+                          'DEL19' = '#F4A7B7', 'YAP' = '#FF1493'))
   } else if(groups == "only_HCD"){
-    data_mat <- mat %>% select(ip_Y_V_S_HCD, ip_Y_V_S_BAP, ip_Y_V_S_HCD_BAP)
-    anno <- list(agent = c('HCD' = '#005AB5', 'BAP' = '#00DB00', 'HCD_BAP' = '#000079'),
-                 clone = c('WT' = '#A5DEE4', 'L858R' = '#FBE251',
-                           'DEL19' = '#F4A7B7', 'YAP' = '#FF1493'))
+    data_mat <- mat %>% select(name_df$group_name[only_HCD])
+    ann <- list(agent = c('HCD' = '#005AB5', 'BAP' = '#00DB00', 'HCD_BAP' = '#000079'),
+                clone = c('WT' = '#A5DEE4', 'L858R' = '#FBE251',
+                          'DEL19' = '#F4A7B7', 'YAP' = '#FF1493'))
   } else if(groups == "only_CD"){
-    data_mat <- mat %>% select(ip_Y_V_S_LCD, ip_Y_V_S_HCD, ip_Y_V_S_BAP,
-                               ip_Y_V_S_LCD_BAP, ip_Y_V_S_HCD_BAP)
-    anno <- list(agent = c('LCD' = '#0080FF', 'HCD' = '#005AB5',
-                           'BAP' = '#00DB00', 'LCD_BAP' = '#0000E3', 'HCD_BAP' = '#000079'),
-                 clone = c('WT' = '#A5DEE4', 'L858R' = '#FBE251',
-                           'DEL19' = '#F4A7B7', 'YAP' = '#FF1493'))
-  }
-  else{
-    cat(c("<- check groups", "\n"))
+    data_mat <- mat %>% select(all_of(name_df$group_name[only_CD]))
+    ann <- list(agent = c('LCD' = '#0080FF', 'HCD' = '#005AB5',
+                          'BAP' = '#00DB00', 'LCD_BAP' = '#0000E3', 'HCD_BAP' = '#000079'),
+                clone = c('WT' = '#A5DEE4', 'L858R' = '#FBE251',
+                          'DEL19' = '#F4A7B7', 'YAP' = '#FF1493'))
+  } else if(groups == "CON"){
+    data_mat <- mat %>% select(all_of(name_df$group_name[CON]))
+    ann <- list(agent = c('CON' = '#E0E0E0', 'DMS' = '#ADADAD'),
+                clone = c('WT' = '#A5DEE4', 'L858R' = '#FBE251',
+                          'DEL19' = '#F4A7B7', 'YAP' = '#FF1493'))
+  } else{
     return(NULL)
   }
   
@@ -138,7 +158,7 @@ draw_heatmap <- function(file=file,
   
   # draw hp
   ha <- HeatmapAnnotation(agent = agent, clone = clone,
-                          col = anno)
+                          col = ann)
 
   heat <- ComplexHeatmap::Heatmap(mat_scale, top_annotation = ha, cluster_columns = F, 
                                   show_row_names = show_row_names, 
@@ -165,6 +185,11 @@ draw_from_list <- function(list,
                            label_num=F,
                            log_scale=FALSE
                            ){
+  if(!(groups%in%c("AS","CO","LCD","HCD","CD","BAP","only_AS","only_CO",
+                  "only_LCD","only_HCD","only_CD","CON","ALL"))){
+    stop('"groups" must be "AS","CO","LCD","HCD","CD","BAP","only_AS","only_CO",
+         "only_LCD","only_HCD","only_CD","CON" or "ALL".')
+  }
   cat(c(" -> input list with",length(list),"genes","\n"))
   if(id=="ENSEMBL"){
     list <- list  
@@ -195,26 +220,26 @@ draw_from_list <- function(list,
   
   # select groups
   if(groups == "AS"){
-    data_mat <- mat %>% select(all_of(AS))
+    data_mat <- mat %>% select(all_of(name_df$group_name[AS]))
     ann <- list(agent = c('CON' = '#E0E0E0', 'DMS' = '#ADADAD', 'AS' = '#FFFF37',
                            'BAP' = '#00DB00', 'AS_BAP' = '#FFDC35'),
                  clone = c('WT' = '#A5DEE4', 'L858R' = '#FBE251',
                            'DEL19' = '#F4A7B7', 'YAP' = '#FF1493'))
   } else if(groups == "CO"){
-    data_mat <- mat %>% select(all_of(CO))
+    data_mat <- mat %>% select(all_of(name_df$group_name[CO]))
     ann <- list(agent = c('CON' = '#E0E0E0', 'DMS' = '#ADADAD', 'CO' = '#FF5151',
                            'BAP' = '#00DB00', 'CO_BAP' = '#EA0000'),
                  clone = c('WT' = '#A5DEE4', 'L858R' = '#FBE251',
                            'DEL19' = '#F4A7B7', 'YAP' = '#FF1493'))
   } else if(groups == "CD"){
-    data_mat <- mat %>% select(all_of(CD))
+    data_mat <- mat %>% select(all_of(name_df$group_name[CD]))
     ann <- list(agent = c('CON' = '#E0E0E0', 'DMS' = '#ADADAD', 'LCD' = '#0080FF',
                            'HCD' = '#005AB5', 'BAP' = '#00DB00',
                            'LCD_BAP' = '#0000E3', 'HCD_BAP' = '#000079'),
                  clone = c('WT' = '#A5DEE4', 'L858R' = '#FBE251',
                            'DEL19' = '#F4A7B7', 'YAP' = '#FF1493'))
   } else if(groups == "BAP"){
-    data_mat <- mat %>% select(all_of(BAP))
+    data_mat <- mat %>% select(all_of(name_df$group_name[BAP]))
     ann <- list(agent = c('CON' = '#E0E0E0', 'DMS' = '#ADADAD', 'BAP' = '#00DB00',
                            'AS_BAP' = '#FFDC35', 'CO_BAP' = '#EA0000',
                            'LCD_BAP' = '#0000E3', 'HCD_BAP' = '#000079'),
@@ -230,34 +255,37 @@ draw_from_list <- function(list,
                  clone = c('WT' = '#A5DEE4', 'L858R' = '#FBE251',
                            'DEL19' = '#F4A7B7', 'YAP' = '#FF1493'))
   } else if(groups == "only_CO"){
-    data_mat <- mat %>% select(ip_Y_V_S_CO, ip_Y_V_S_BAP, ip_Y_V_S_CO_BAP)
+    data_mat <- mat %>% select(all_of(name_df$group_name[only_CO]))
     ann <- list(agent = c('CO' = '#FF5151', 'BAP' = '#00DB00', 'CO_BAP' = '#EA0000'),
                 clone = c('WT' = '#A5DEE4', 'L858R' = '#FBE251',
                           'DEL19' = '#F4A7B7', 'YAP' = '#FF1493'))
   } else if(groups == "only_AS"){
-    data_mat <- mat %>% select(ip_Y_V_S_AS, ip_Y_V_S_BAP, ip_Y_V_S_AS_BAP)
+    data_mat <- mat %>% select(all_of(name_df$group_name[only_AS]))
     ann <- list(agent = c('AS' = '#FFFF37', 'BAP' = '#00DB00', 'AS_BAP' = '#FFDC35'),
                 clone = c('WT' = '#A5DEE4', 'L858R' = '#FBE251',
                           'DEL19' = '#F4A7B7', 'YAP' = '#FF1493'))
   } else if(groups == "only_LCD"){
-    data_mat <- mat %>% select(ip_Y_V_S_LCD, ip_Y_V_S_BAP, ip_Y_V_S_LCD_BAP)
+    data_mat <- mat %>% select(all_of(name_df$group_name[only_LCD]))
     ann <- list(agent = c('LCD' = '#0080FF', 'BAP' = '#00DB00', 'LCD_BAP' = '#0000E3'),
                 clone = c('WT' = '#A5DEE4', 'L858R' = '#FBE251',
                           'DEL19' = '#F4A7B7', 'YAP' = '#FF1493'))
   } else if(groups == "only_HCD"){
-    data_mat <- mat %>% select(ip_Y_V_S_HCD, ip_Y_V_S_BAP, ip_Y_V_S_HCD_BAP)
+    data_mat <- mat %>% select(name_df$group_name[only_HCD])
     ann <- list(agent = c('HCD' = '#005AB5', 'BAP' = '#00DB00', 'HCD_BAP' = '#000079'),
                 clone = c('WT' = '#A5DEE4', 'L858R' = '#FBE251',
                           'DEL19' = '#F4A7B7', 'YAP' = '#FF1493'))
   } else if(groups == "only_CD"){
-    data_mat <- mat %>% select(ip_Y_V_S_LCD, ip_Y_V_S_HCD, ip_Y_V_S_BAP,
-                               ip_Y_V_S_LCD_BAP, ip_Y_V_S_HCD_BAP)
+    data_mat <- mat %>% select(all_of(name_df$group_name[only_CD]))
     ann <- list(agent = c('LCD' = '#0080FF', 'HCD' = '#005AB5',
                            'BAP' = '#00DB00', 'LCD_BAP' = '#0000E3', 'HCD_BAP' = '#000079'),
                 clone = c('WT' = '#A5DEE4', 'L858R' = '#FBE251',
                           'DEL19' = '#F4A7B7', 'YAP' = '#FF1493'))
+  } else if(groups == "CON"){
+    data_mat <- mat %>% select(all_of(name_df$group_name[CON]))
+    ann <- list(agent = c('CON' = '#E0E0E0', 'DMS' = '#ADADAD'),
+                 clone = c('WT' = '#A5DEE4', 'L858R' = '#FBE251',
+                           'DEL19' = '#F4A7B7', 'YAP' = '#FF1493'))
   } else{
-    cat(c("<- please type in groups", "\n"))
     return(NULL)
   }
   
@@ -635,10 +663,10 @@ venn_to_excel <- function(venn_list, name) {
 }
 
 # get_kegg_list -----------------------------------------------------------
-get_kegg_list <- function(path_name
+get_kegg_list <- function(path_ID
                           ){
   # 获取指定通路的基因列表
-  pathway_df <- KEGGREST::keggGet(path_name)[[1]]
+  pathway_df <- KEGGREST::keggGet(path_ID)[[1]]
   pathway_genes <- pathway_df$GENE
   cat(c(" -> pathway name:", pathway_df$NAME,"\n"))
   # 提取基因名称
@@ -752,9 +780,9 @@ plot_heatmap <- function(file_list, group_names, analysis, dir="up",title="") {
   
   # 繪製熱圖
   if(dir=="up"){
-    col_fun = colorRamp2(c(0, 2, 5), c("white","#FFB6C1", "red"))
+    col_fun = colorRamp2(c(1, 5), c("white", "red"))
   } else{
-    col_fun = colorRamp2(c(0, 5), c("white", "blue"))
+    col_fun = colorRamp2(c(1, 5), c("white", "blue"))
   }
   ComplexHeatmap::Heatmap(mat, 
                           na_col = "grey", 
@@ -763,12 +791,13 @@ plot_heatmap <- function(file_list, group_names, analysis, dir="up",title="") {
                           col = col_fun, 
                           name = "-log10(P)",
                           row_names_gp = gpar(fontsize = 7), 
-                          column_names_gp = gpar(fontsize = 8), 
+                          column_names_gp = gpar(fontsize = 8),
+                          column_title_gp = gpar(fontsize = 10),
                           column_names_rot = 45, 
                           column_title = title,
                           heatmap_legend_param = list(   # 控制color bar在0~5之間
-                            at = c(0, 1, 2, 3, 4, 5),  
-                            labels = c("0", "1", "2", "3", "4", "5")  ))
+                            at = c(1, 2, 3, 4, 5),  
+                            labels = c("1", "2", "3", "4", "5")  ))
 }
 
 # run_path_heatmap --------------------------------------------------------
@@ -1019,11 +1048,11 @@ plot_MD <- function(file_name, title="", logFC_criteria = 1, only_DE=F){
   non <- df %>% filter(color==3) %>% nrow()
   cat(c(" -> up:",up," -> down:",down, " -> non:",non,"\n"))
   if(only_DE==T){
-    df <- df %>% filter(color==c(1,2))
+    df <- df %>% filter(color == 1 | color == 2)
   }
   
   ### MD plot
-  cat("plotting\n")
+  message("plotting")
   ggplot(df, aes(x = log(Average_expression), y = logFC, color = color)) +
     geom_point() +
     scale_colour_manual(values = c("red","royalblue3","grey")) +
@@ -1032,5 +1061,66 @@ plot_MD <- function(file_name, title="", logFC_criteria = 1, only_DE=F){
     theme(legend.position = "none") +
     geom_vline(xintercept = 0, linetype = 'dotted') +
     geom_hline(yintercept = 0, linetype = 'dotted') +
-    ggtitle(title)
+    ggtitle(title) +
+    geom_hline(yintercept = c(-logFC_criteria, logFC_criteria), 
+             color = "dodgerblue", linetype = 'solid', linewidth = 0.7)
+}
+
+# plotMD_kegg -------------------------------------------------------------
+plotMD_kegg <- function(file_name, ID, title="",logFC_criteria = 1, only_DE=T,
+                        with_line=T){
+  # 获取指定通路的基因列表
+  pathway_df <- KEGGREST::keggGet(ID)[[1]]
+  pathway_genes <- pathway_df$GENE
+  cat(c(" -> pathway name:", pathway_df$NAME,"\n"))
+  # 提取基因名称
+  gene_names <- sapply(strsplit(pathway_genes, ";"), `[`, 1)
+  # 删除奇数索引的元素
+  gene_list_even <- gene_names[seq_along(gene_names) %% 2 == 0]
+  cat(c(" ->",length(gene_list_even),"genes involved.\n"))
+  
+  # filter data
+  cat(c(" -> ",file_name,"/n"))
+  df <- get_df(file_name ,all = T) %>% group_by(SYMBOL) %>%
+    filter(.,!(SYMBOL%in% c("havana","ensembl_havana","havana_tagene")),
+           geneBiotype=="protein_coding") %>% 
+    filter(.,SYMBOL %in% gene_list_even)%>%
+    summarize(across(where(is.numeric), sum)) %>% na.omit() %>% 
+    column_to_rownames(., var = "SYMBOL") %>% 
+    rownames_to_column("ID") %>% 
+    .[,c(1,5,6,7,8)] %>% 
+    setNames(c("ID","treat","control","M","D"))%>% 
+    mutate(Average_expression =(treat+control)/2) %>% 
+    .[,c(1,4,6)] %>% setNames(c("ID","log2FC","Average_expression")) %>% 
+    mutate(ID = ID, color = "3") %>% 
+    mutate(color = if_else(log2FC > logFC_criteria, '1', color)) %>%
+    mutate(color = if_else(log2FC < logFC_criteria & log2FC > negative(logFC_criteria), '3', color)) %>%   
+    mutate(color = if_else(log2FC < negative(logFC_criteria), '2', color))
+  
+  up <- df %>% filter(color==1) %>% nrow()
+  down <- df %>% filter(color==2) %>% nrow()
+  non <- df %>% filter(color==3) %>% nrow()
+  cat(c(" -> up:",up," -> down:",down, " -> non:",non,"\n"))
+  if(only_DE==T){
+    df <- df %>% filter(color==1|color==2)
+  }
+  
+  ### MD plot
+  message("drawing MD plot")
+  p <- ggplot(df, aes(x = log(Average_expression), y = log2FC, color = color)) +
+    geom_point() +
+    scale_colour_manual(values = c("red","royalblue3","grey")) +
+    geom_label_repel(aes(label = ID, size=1)) + 
+    theme_minimal() +
+    theme(legend.position = "none") +
+    geom_vline(xintercept = 0, linetype = 'dotted') +
+    geom_hline(yintercept = 0, linetype = 'dotted') +
+    ggtitle(paste(title, "  ",pathway_df$NAME))
+  
+  if(with_line==T){
+    p + geom_hline(yintercept = c(-logFC_criteria, logFC_criteria), 
+                   color = "dodgerblue", linetype = 'solid', linewidth = 0.7)
+  } else {
+    p
+  }
 }
