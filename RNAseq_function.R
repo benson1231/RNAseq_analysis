@@ -166,8 +166,8 @@ draw_heatmap <- function(file=file,
   # clone name
   clone <- factor( 
     str_replace_all(str_sub(col, 4,4), c("W" = "WT", "L" = "L858R", 
-                                         "D" = "DEL19", "Y" = "YAP")),
-    levels=c('WT','L858R',"DEL19","YAP"))
+                                         "D" = "Del19", "Y" = "YAP")),
+    levels=c('WT','L858R',"Del19","YAP"))
   
   # draw hp
   ha <- HeatmapAnnotation(agent = agent, clone = clone,
@@ -323,8 +323,8 @@ draw_from_list <- function(list,
   # clone name
   clone <- factor( 
     str_replace_all(str_sub(col, 4,4), c("W" = "WT", "L" = "L858R", 
-                                         "D" = "DEL19", "Y" = "YAP")),
-    levels=c('WT','L858R',"DEL19","YAP"))
+                                         "D" = "Del19", "Y" = "YAP")),
+    levels=c('WT','L858R',"Del19","YAP"))
   
   # draw hp
   ha <- HeatmapAnnotation(agent = agent, clone = clone,
@@ -1163,7 +1163,7 @@ draw_bar <- function(gene){
     scale_fill_manual(values = clone) +  # 使用自定义颜色
     labs(title = paste0(gene," (RNA-seq)"),
          x = "Groups",
-         y = "Expression Level") +
+         y = "Expression Level(CPM)") +
     theme_minimal() +
     theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5))
 }
