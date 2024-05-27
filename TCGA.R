@@ -4,7 +4,7 @@ library(maftools)
 library(survival)
 library(DT)
 
-# query -------------------------------------------------------------------
+# query details -------------------------------------------------------------------
 query <- GDCquery(
   project = "TCGA-LUAD",
   data.category = "Simple Nucleotide Variation",
@@ -80,25 +80,31 @@ if (length(levels(clinical$mutation_status)) > 1) {
 
 
 # new ---------------------------------------------------------------------
+# 查詢肺腺癌("TCGA-LUAD")
 query <- GDCquery(
   project = "TCGA-LUAD",
   data.category = "Simple Nucleotide Variation",
   data.type = "Masked Somatic Mutation",
   workflow.type = "Aliquot Ensemble Somatic Variant Merging and Masking"
 )
+# 只需下載一次
 GDCdownload(query)
+# get data
 maf <- GDCprepare(query)
 maf_object <- read.maf(maf = maf)
-
+# set gene you interest
 gene_of_interest <- "TP53"
+# get mutation sample ID
 mutation_samples <- subset(maf_object@data, Hugo_Symbol == gene_of_interest)$Tumor_Sample_Barcode
-# 提取样本ID的前12个字符
+# 提取了樣本ID的前12個字符，用於後續臨床樣本配對
 mutation_samples_short <- substr(mutation_samples, 1, 12)
 length(mutation_samples_short)
 head(mutation_samples_short)
-
+# get clinical data
 clin.LUAD <- GDCquery_clinic("TCGA-LUAD", "clinical")
+# 新增紀錄突變狀態的欄位
 clin.LUAD$mutation_status <- ifelse(clin.LUAD$submitter_id %in% mutation_samples_short, "Mutated", "Wildtype")
+# plotting
 TCGAanalyze_survival(
   data = clin.LUAD,
   clusterCol = "mutation_status",
@@ -108,3 +114,4 @@ TCGAanalyze_survival(
   legend = gene_of_interest, 
   filename = paste0("output/",gene_of_interest,"_survival.pdf")
 )
+
