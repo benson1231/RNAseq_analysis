@@ -18,32 +18,17 @@ library(KEGGREST)
 
 source("RNAseq_function.R")
 
-# 1.setting -----------------------------------------------------------------
+# 0.setting -----------------------------------------------------------------
 data_path <- "/Users/benson/Documents/raw_data/RNA-seq1-3/ST"
 output_dir <- "/Users/benson/Documents/project/RNA-seq1-3/output"
-name_df <- read.xlsx("/Users/benson/Documents/project/RNA-seq1-3/data/name.xlsx")
+name_df <- openxlsx::read.xlsx("/Users/benson/Documents/project/RNA-seq1-3/data/name.xlsx")
 # color setting
 red_white_blue_colors <- c("blue", "white", "red")
 rwb_palette <- colorRampPalette(red_white_blue_colors)
 n_colors <- 10
 colors <- rwb_palette(n_colors)
 
-
-CON <- c(1,2, 14,15, 27,28, 40,41)
-AS <- c(1,2,5,9,10, 14,15,18,22,23, 27,28,31,35,36, 40,41,44,48,49)
-only_AS <- c(5,9,10, 18,22,23, 31,35,36, 44,48,49)
-CO <- c(1,2,6,9,11, 14,15,19,22,24, 27,28,32,35,37, 40,41,45,48,50)
-only_CO <- c(6,9,11, 19,22,24, 32,35,37, 45,48,50)
-LCD <- c(1,2,7,9,12, 14,15,20,22,25, 27,28,33,35,38, 40,41,46,48,51)
-only_LCD <- c(7,9,12, 20,22,25, 33,35,38, 46,48,51)
-HCD <- c(1,2,8,9,13, 14,15,21,22,26, 27,28,34,35,39, 40,41,47,48,52)
-only_HCD <- c(8,9,13, 21,22,26, 34,35,39, 47,48,52)
-CD <- c(1,2,7,8,9,12,13, 14,15,20,21,22,25,26, 27,28,33,34,35,38,39, 40,41,46,47,48,51,52)
-only_CD <- c(7,8,9,12,13, 20,21,22,25,26, 33,34,35,38,39, 46,47,48,51,52)
-BAP <- c(1,2,9,10,11,12,13, 14,15,22,23,24,25,26, 27,28,35,36,37,38,39, 40,41,48,49,50,51,52)
-
-
-# 2.input raw_count data ----------------------------------------------------
+# 1.input raw_count data ----------------------------------------------------
 ### load annotation data
 gene_df <- "/Users/benson/Documents/project/RNA-seq1-3/data/anno_gene.RDS" %>% 
   readRDS() %>%
@@ -63,6 +48,10 @@ gene_count <- mycount_df %>%
   summarize(across(where(is.numeric), sum)) %>% na.omit() %>% 
   column_to_rownames(., var = "SYMBOL") %>% 
   select(name_df$group_name) %>% setNames(name_df$abbreviate)
+
+# 2.bar plot --------------------------------------------------------------
+draw_bar("ANGPT2")
+draw_bar("ANKRD1")
 
 # 3.MD plot -----------------------------------------------------------------
 # only DEG
@@ -101,7 +90,7 @@ col.treatment <- c('#FFE66F','#FFDC35','#FFD2D2','#00DB00','#FF5151','#EA0000',
                    '#E0E0E0','#FF9797','#ADADAD','#005AB5','#000079','#0080FF',
                    '#0000E3')[abbr_sampleinfo$treatment]
 col.culture <- c("#0072E3","darkblue")[abbr_sampleinfo$culture]
-col.cell <- c('#F4A7B7','#FBE251','#A5DEE4','#C1328E')[abbr_sampleinfo$cell]
+col.cell <- c('#00DB00','#FF88C2','#0080FF', '#FF8000')[abbr_sampleinfo$cell]
 # # sample
 # plotMDS(y,col=col.sample ,xlab = "Dimension 1",ylab = "Dimension 2")
 # title("sample")
@@ -118,27 +107,33 @@ title("Carcinogen Treatment")
 # title("Protocol(Short-term/Long-term)")
 ### cell type
 plotMDS(y,col=col.cell,xlab = "Dimension 1",ylab = "Dimension 2")
-legend("topleft",fill=c("#F4A7B7","#FBE251",'#A5DEE4','#C1328E'),legend=levels(abbr_sampleinfo$cell))
+legend("topleft",fill=c('#00DB00','#FF88C2','#0080FF', '#FF8000'),legend=levels(abbr_sampleinfo$cell))
 title("Cell type")
 
 # 5.ORA ---------------------------------------------------------------------
 ### enrichKEGG(KEGG pathway)
-keg_result <- run_keg_path("ip_D_V_S_CO_0_deg.xlsx", dir = "up",log_crit = 1)
-# view(keg_result %>% as.data.frame() %>% rownames_to_column("new_ID"))
-# heatmap
-list <- force_list(keg_result@result$geneID[4])
-draw_from_list(list =list , groups = "CO", id = "SYMBOL")
-list <- get_kegg_list(path_ID = keg_result@result$ID[3]) 
-draw_from_list(list =list , groups = "CO", id = "SYMBOL")
-plotMD_kegg(name_df$file_name[34],keg_result@result$ID[2],
-            title = name_df$abbreviate[34],with_line = F)
+keg_result <- run_keg_path("ip_Y_V_S_CO_BAP_0_deg.xlsx", dir = "up",log_crit = 1)
+view(keg_result %>% as.data.frame() %>% rownames_to_column("new_ID"))
 # bar plot
 barplot(keg_result, showCategory=10, font.size = 9, x = "GeneRatio", label_format = 40,
         title = "")   # change
 # bar plot with qscore
 mutate(keg_result, qscore = -log(p.adjust, base=10)) %>% 
   barplot(., showCategory=10, font.size = 9, x = "qscore", label_format = 40,
-          title = "")   # change
+          title = "HCD")   # change
+# heatmap
+# list <- force_list(keg_result@result$geneID[4])
+# draw_from_list(list =list , groups = "CO", id = "SYMBOL")
+list <- get_kegg_list(path_ID = keg_result@result$ID[6]) 
+draw_from_list(list =list , groups = "CD", id = "SYMBOL",title = "Mineral absorption")
+kegg_ID_order <- 3  # change
+group_order <- 6  # change
+plotMD_kegg(name_df$file_name[group_order],keg_result@result$ID[kegg_ID_order],
+            title = name_df$abbreviate[group_order],with_line = F,only_DE = F)
+# bar plot with qscore
+mutate(keg_result, qscore = -log(p.adjust, base=10)) %>% 
+  barplot(., showCategory=10, font.size = 9, x = "qscore", label_format = 40,
+          title = "CO")   # change
 
 ### enrichPathway(Reactome pathway)
 react_result <- run_reactome("ip_D_V_S_HCD_0_deg.xlsx",dir = "up")
@@ -155,25 +150,25 @@ mutate(react_result, qscore = -log(p.adjust, base=10)) %>%
           title = "")   # change
 
 # 6.ORA several groups with heatmap -----------------------------------------
-file_list <- c("ip_W_V_S_CO_0_deg.xlsx", "ip_D_V_S_CO_0_deg.xlsx", 
-               "ip_Y_V_S_CO_0_deg.xlsx","ip_L_V_S_CO_0_deg.xlsx")
+file_list <- c("ip_W_V_S_HCD_0_deg.xlsx", "ip_D_V_S_HCD_0_deg.xlsx", 
+               "ip_Y_V_S_HCD_0_deg.xlsx","ip_L_V_S_HCD_0_deg.xlsx")
 group_names <- c("WT", "Del19", "YAP","L858R")
 ### KEGG
-plot_heatmap(file_list, group_names, analysis = "kegg", dir="up", title = "CO")
+p1 <- plot_heatmap(file_list, group_names, analysis = "kegg", dir="down", col_title = "HCD",row_title = "KEGG")
 ### Reactome
-plot_heatmap(file_list, group_names, analysis = "reactome", dir="up", title = "HCD")
-
+p2 <- plot_heatmap(file_list, group_names, analysis = "reactome", dir="down", row_title = "Reactome")
+p1%v%p2
 
 # 7.GSEA analysis -----------------------------------------------------------
 ### KEGG
-keg <- kegg_run("ip_D_V_S_HCD_0_deg.xlsx")  # change
+keg <- kegg_run("ip_Y_V_S_HCD_0_deg.xlsx")  # change
 ### dot plot
 dotplot(keg, showCategory = 10, label_format=50, 
         title = "Enriched Pathways", split=".sign") + 
   facet_grid(.~.sign)
 ### Gene-Concept Network
 keg_gene <- DOSE::setReadable(keg, 'org.Hs.eg.db', 'ENTREZID') # convert gene ID to Symbol
-# View(keg_gene@result %>% rownames_to_column("pathway_ID"))
+View(keg_gene@result %>% rownames_to_column("pathway_ID"))
 cnetplot(keg_gene, categorySize="pvalue", 
          showCategory = keg_gene@result$Description[c(16)],  # change
          color.params = list(foldChange = keg_gene@geneList[abs(keg_gene@geneList)>1]  # change
@@ -228,7 +223,7 @@ p1 %v% p2
 
 # 10.cluster analysis ------------------------------------------------------
 file_name <- "ip_Y_V_S_CO_BAP_0_deg.xlsx"
-group <- "only_HCD"
+group <- "only_CO"
 k_value <- 5
 draw_heatmap(file_name, groups = group, log_crit = 1, km = k_value)
 # run cluster analysis
@@ -255,24 +250,26 @@ draw_from_list(list = cluster4, groups = group, id = "SYMBOL",show_row_names = T
                title = "C4")
 
 # 11.venn diagram ------------------------------------------------------------
-CO_up <- get_deg("ip_Y_V_S_CO_0_deg.xlsx", log_crit = c(1,-1),dir = "up")
-BAP_up <- get_deg("ip_Y_V_S_BAP_0_deg.xlsx", log_crit = c(1,-1),dir = "up")
-CO_BAP_up <- get_deg("ip_Y_V_S_CO_BAP_0_deg.xlsx", log_crit = c(1,-1),dir = "up")
+W_up <- get_deg("ip_W_V_S_AS_0_deg.xlsx", log_crit = c(1,-1),dir = "down")
+L_up <- get_deg("ip_L_V_S_AS_0_deg.xlsx", log_crit = c(1,-1),dir = "down")
+D_up <- get_deg("ip_D_V_S_AS_0_deg.xlsx", log_crit = c(1,-1),dir = "down")
+Y_up <- get_deg("ip_Y_V_S_AS_0_deg.xlsx", log_crit = c(1,-1),dir = "down")
 # venn diagram list
-venn_list <- list(CO = CO_up,
-                  BAP = BAP_up,
-                  CO_BAP =CO_BAP_up)
+venn_list <- list(W = W_up,
+                  L = L_up,
+                  D = D_up,
+                  Y = Y_up)
 # venn diagram
 ggVennDiagram(venn_list,label_percent_digit = 1,label_alpha = 0) +
-  scale_fill_gradient(low="white",high = "#FF2D2D")
+  scale_fill_gradient(low="white",high = "#FF2D2D")+ggtitle("AS")
 ggVennDiagram(venn_list,label_percent_digit = 1,label_alpha = 0) +
-  scale_fill_gradient(low="white",high = "#6A6AFF")
+  scale_fill_gradient(low="white",high = "#6A6AFF")+ggtitle("AS")
 # upset
 ggVennDiagram(venn_list,label_percent_digit = 1,label_alpha = 0, force_upset = T)
 # get venn diagram result(gene list)
 venn_result <- process_region_data(Venn(venn_list))
 venn_result
-draw_from_list(list = venn_result$item[[7]], groups = "CO")
+draw_from_list(list = venn_result$item[[15]], groups = "AS")
 
 ### use divenn2.0
 get_divenn("ip_Y_V_S_CO_0_deg.xlsx",output_name = "CO.xlsx")
