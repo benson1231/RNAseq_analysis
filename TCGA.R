@@ -92,16 +92,22 @@ GDCdownload(query)
 # get data
 maf <- GDCprepare(query)
 maf_object <- read.maf(maf = maf)
+saveRDS(maf_object,"maf_object.RDS")
+maf_object <- "/Users/benson/Documents/project/RNA-seq1-3/data/maf_object.RDS" %>%
+  readRDS()
+# # get clinical data
+# clin.LUAD <- GDCquery_clinic("TCGA-LUAD", "clinical")
+# saveRDS(clin.LUAD,"clin_LUAD.RDS")
+clin.LUAD <- "/Users/benson/Documents/project/RNA-seq1-3/data/clin_LUAD.RDS" %>% 
+  readRDS()
 # set gene you interest
-gene_of_interest <- "TP53"
+gene_of_interest <- "JUN"
 # get mutation sample ID
 mutation_samples <- subset(maf_object@data, Hugo_Symbol == gene_of_interest)$Tumor_Sample_Barcode
 # 提取了樣本ID的前12個字符，用於後續臨床樣本配對
 mutation_samples_short <- substr(mutation_samples, 1, 12)
 length(mutation_samples_short)
 head(mutation_samples_short)
-# get clinical data
-clin.LUAD <- GDCquery_clinic("TCGA-LUAD", "clinical")
 # 新增紀錄突變狀態的欄位
 clin.LUAD$mutation_status <- ifelse(clin.LUAD$submitter_id %in% mutation_samples_short, "Mutated", "Wildtype")
 # plotting
