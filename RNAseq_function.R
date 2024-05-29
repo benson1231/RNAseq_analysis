@@ -1,5 +1,5 @@
-# function for RNA-seq data 
-# def
+# function for RNA-seq data ---------------------------------------------------
+# pre-def
 CON <- c(1,2, 14,15, 27,28, 40,41)
 AS <- c(1,2,9,5,10, 14,15,22,18,23, 27,28,35,31,36, 40,41,48,44,49)
 only_AS <- c(9,5,10, 22,18,23, 35,31,36, 48,44,49)
@@ -394,8 +394,7 @@ get_deg <- function(file=file,
   # 處理資料
   data <- raw_data %>%
     as.data.frame() %>% 
-    filter(.,!(SYMBOL%in% c("havana","ensembl_havana","havana_tagene")),
-           geneBiotype=="protein_coding") %>% 
+    filter(geneBiotype=="protein_coding") %>% 
     select(all_of(id_col),M) %>%
     group_by(across(all_of(id_col))) %>%
     summarize(across(where(is.numeric), mean)) %>%
@@ -451,8 +450,8 @@ get_list <- function(file_name,
                      type = "ENTREZID"
                      ) {
   # 檢查 type 是否有效
-  if (!(type %in% c("ENTREZID", "ENSEMBL"))) {
-    stop("Invalid type. Allowed values are 'ENTREZID' or 'ENSEMBL'.")
+  if (!(type %in% c("ENTREZID", "ENSEMBL","SYMBOL"))) {
+    stop("Invalid type. Allowed values are 'ENTREZID', 'ENSEMBL' or 'SYMBOL'.")
   }
   # 讀取資料
   raw_df <- readxl::read_xlsx(file.path(data_path, file_name)) %>% as.data.frame()
@@ -460,12 +459,15 @@ get_list <- function(file_name,
   # 根據不同的類型選擇相應的欄位名稱
   if (type == "ENTREZID") {
     id_col <- "ENTREZID"
-  } else {
+  } else (type == "ENSEMBL"){
     id_col <- "ENSEMBL"
+  } else {
+    id_col <- "SYMBOL"
   }
   
   # 處理資料
   df <- raw_df %>% as.data.frame() %>% 
+    filter(geneBiotype=="protein_coding") %>%
     select(all_of(id_col),M) %>%
     group_by(across(all_of(id_col))) %>%
     summarize(across(where(is.numeric), mean)) %>%
@@ -604,6 +606,7 @@ get_df <- function(file,
                    ){
   if(all==TRUE){
     df <- readxl::read_xlsx(file.path(data_path, file)) %>% as.data.frame()
+    cat(c(" -> raw data from ",file))
     return(df)
   }
   
@@ -611,18 +614,21 @@ get_df <- function(file,
     if(dir=="all"){
       df <- readxl::read_xlsx(file.path(data_path, file)) %>% 
         as.data.frame() %>% 
+        filter(geneBiotype=="protein_coding") %>%
         filter(abs(M) > log_crit[1]) %>% 
         select(M, SYMBOL) %>% 
         setNames(c("logFC","gene"))
     }else if(dir=="up"){
       df <- readxl::read_xlsx(file.path(data_path, file)) %>% 
         as.data.frame() %>% 
+        filter(geneBiotype=="protein_coding") %>%
         filter(M > log_crit[1]) %>% 
         select(M, SYMBOL) %>% 
         setNames(c("logFC","gene"))
     }else if(dir=="down"){
       df <- readxl::read_xlsx(file.path(data_path, file)) %>% 
         as.data.frame() %>% 
+        filter(geneBiotype=="protein_coding") %>%
         filter(M < log_crit[2]) %>% 
         select(M, SYMBOL) %>% 
         setNames(c("logFC","gene"))
@@ -638,12 +644,14 @@ get_df <- function(file,
     if(with_D==T){
       df <- readxl::read_xlsx(file.path(data_path, file)) %>% 
         as.data.frame() %>% 
+        filter(geneBiotype=="protein_coding") %>%
         filter(ENSEMBL %in% list) %>% 
         select(M,D, SYMBOL) %>% 
         setNames(c("logFC","D","gene"))
     } else{
       df <- readxl::read_xlsx(file.path(data_path, file)) %>% 
         as.data.frame() %>% 
+        filter(geneBiotype=="protein_coding") %>%
         filter(ENSEMBL %in% list) %>% 
         select(M, SYMBOL) %>% 
         setNames(c("logFC","gene"))
@@ -767,7 +775,8 @@ get_p <- function(x, group_name, top=10, p_value_cutoff = 0.01){
 }
 
 # plot_heatmap ------------------------------------------------------------
-plot_heatmap <- function(file_list, group_names, analysis, dir="up",col_title="", row_title="") {
+plot_heatmap <- function(file_list, group_names, analysis, dir="up",
+                         col_title="", row_title="") {
   # 檢查參數是否匹配
   if (length(file_list) != length(group_names)) {
     stop("file_list and group_names must have the same length")
@@ -979,7 +988,12 @@ run_TF <- function(file_name, title="", n_tfs=25){
 }
 
 # plot_TF -----------------------------------------------------------------
-plot_TF <- function(file_name, TF, title="", logFC_criteria = 1,plot=T){
+plot_TF <- function(file_name, TF, title="", logFC_criteria = 1,plot=T,
+                    with_line=T,plot_type=1){
+  if(!(plot_type%in%c(1,2))){
+    stop(" -> 'plot_type' must be '1' or '2'. 1: MD plot. 2: mutation rate M plot.")
+  }
+  tf <- net_TF %>% setNames(c("ID","regulon","mor"))
   de <- get_df(file_name ,all = T) %>% group_by(SYMBOL) %>%
     summarize(across(where(is.numeric), sum)) %>% na.omit() %>% 
     column_to_rownames(., var = "SYMBOL") %>% 
@@ -987,7 +1001,7 @@ plot_TF <- function(file_name, TF, title="", logFC_criteria = 1,plot=T){
     .[,c(1,5,6,7,8)] %>% 
     setNames(c("ID","treat","control","M","D"))%>% 
     mutate(Average_expression =(treat+control)/2) %>% 
-    .[,c(1,4,6)] %>% setNames(c("ID","logFC","Average_expression"))
+    .[,c(1,4,6)] %>% setNames(c("ID","logFC","Average_expression")) 
   ### Specific TF related genes 
   tf <- TF 
   logFC_criteria <- logFC_criteria  
@@ -1000,22 +1014,40 @@ plot_TF <- function(file_name, TF, title="", logFC_criteria = 1,plot=T){
     column_to_rownames('target') %>% 
     left_join(de,"ID") %>% 
     mutate(color = if_else(logFC > logFC_criteria, '1', color)) %>%
-    mutate(color = if_else(logFC < logFC_criteria & logFC > negative(logFC_criteria), '2', color)) %>%   
-    mutate(color = if_else(logFC < negative(logFC_criteria), '3', color)) 
-  
+    mutate(color = if_else(logFC < logFC_criteria & logFC > negative(logFC_criteria), '3', color)) %>%   
+    mutate(color = if_else(logFC < negative(logFC_criteria), '2', color)) %>% 
+    mutate(dir = ifelse(mor > 0, "1", "2"))
   if(plot==F){
     return(df)
   }
   ### MD plot
-  ggplot(df, aes(x = log(Average_expression), y = logFC, color = color, size=abs(mor))) +
-    geom_point() +
-    scale_colour_manual(values = c("1" = "red", "2" = "royalblue3", "3" = "grey")) +
-    geom_label_repel(aes(label = ID, size=1)) + 
-    theme_minimal() +
-    theme(legend.position = "none") +
-    geom_vline(xintercept = 0, linetype = 'dotted') +
-    geom_hline(yintercept = 0, linetype = 'dotted') +
-    ggtitle(paste(title,tf))
+  if(plot_type==1){
+    p <- ggplot(df, aes(x = log(Average_expression), y = logFC, color = color, size=abs(mor))) +
+      geom_point() +
+      scale_colour_manual(values = c("1" = "red", "2" = "royalblue3", "3" = "grey")) +
+      geom_label_repel(aes(label = ID, size=1)) + 
+      theme_minimal() +
+      theme(legend.position = "none") +
+      geom_vline(xintercept = 0, linetype = 'dotted') +
+      geom_hline(yintercept = 0, linetype = 'dotted') +
+      ggtitle(paste(title,tf))
+  } else{
+    p <- ggplot(df, aes(x = log(Average_expression), y = logFC, color = dir, size=abs(mor))) +
+      geom_point() +
+      scale_colour_manual(values = c("1" = "red", "2" = "royalblue3", "3" = "grey")) +
+      geom_label_repel(aes(label = ID, size=1)) + 
+      theme_minimal() +
+      theme(legend.position = "none") +
+      geom_vline(xintercept = 0, linetype = 'dotted') +
+      geom_hline(yintercept = 0, linetype = 'dotted') +
+      ggtitle(paste(title,tf))
+  }
+  if(with_line==T){
+    p + geom_hline(yintercept = c(-logFC_criteria, logFC_criteria), 
+                   color = "dodgerblue", linetype = 'solid', linewidth = 0.7)
+  } else{
+    p
+  }
 }
 
 # get_divenn --------------------------------------------------------------
@@ -1037,7 +1069,8 @@ get_divenn <- function(file_name, top=50,output_name="up_down.xlsx"){
 
 
 # plot_MD -----------------------------------------------------------------
-plot_MD <- function(file_name, title="", logFC_criteria = 1, only_DE=F){
+plot_MD <- function(file_name, title="", logFC_criteria = 1, only_DE=T,
+                    list=c(),with_line=T,plot_type=1){
   df <- get_df(file_name ,all = T) %>% group_by(SYMBOL) %>%
     filter(.,!(SYMBOL%in% c("havana","ensembl_havana","havana_tagene")),
            geneBiotype=="protein_coding") %>% 
@@ -1048,32 +1081,55 @@ plot_MD <- function(file_name, title="", logFC_criteria = 1, only_DE=F){
     setNames(c("ID","treat","control","M","D"))%>% 
     mutate(Average_expression =(treat+control)/2) %>% 
     .[,c(1,4,6)] %>% setNames(c("ID","logFC","Average_expression")) %>% 
-    mutate(ID = ID, color = "3") %>% 
+    mutate(ID = ID, color = "3") %>% left_join(muta_rate,by = "ID") %>% 
     mutate(color = if_else(logFC > logFC_criteria, '1', color)) %>%
     mutate(color = if_else(logFC < logFC_criteria & logFC > negative(logFC_criteria), '3', color)) %>%   
     mutate(color = if_else(logFC < negative(logFC_criteria), '2', color))
-  
+  # if list was given, filter genes in list 
+  if(length(list)!=0){
+    df <- df %>% filter(ID %in% list)
+    cat(c(" -> filter ",length(list)," genes in input list."))
+  }
+  # calculate number of up/down regulation
   up <- df %>% filter(color==1) %>% nrow()
   down <- df %>% filter(color==2) %>% nrow()
   non <- df %>% filter(color==3) %>% nrow()
   cat(c(" -> up:",up," -> down:",down, " -> non:",non,"\n"))
   if(only_DE==T){
     df <- df %>% filter(color == 1 | color == 2)
+    cat(" -> only plot DEG")
+  }
+  ### MD plot
+  if(plot_type==1){
+    message("plotting MD plot")
+    p <- ggplot(df, aes(x = log(Average_expression), y = logFC, color = color)) +
+      geom_point() +
+      scale_colour_manual(values = c("1" = "red", "2" = "royalblue3", "3" = "grey")) +
+      geom_label_repel(aes(label = ID, size=1)) + 
+      theme_minimal() +
+      theme(legend.position = "none") +
+      geom_vline(xintercept = 0, linetype = 'dotted') +
+      geom_hline(yintercept = 0, linetype = 'dotted') +
+      ggtitle(title) 
+  } else{
+    message("plotting logFC_mutation rate plot")
+    p <- ggplot(df, aes(x = `mutation_ratio(%)`, y = logFC, color = color))  +
+      geom_point() +
+      scale_colour_manual(values = c("1" = "red", "2" = "royalblue3", "3" = "grey")) +
+      geom_label_repel(aes(label = ID, size=1)) + 
+      theme_minimal() +
+      theme(legend.position = "none") +
+      geom_vline(xintercept = 0, linetype = 'dotted') +
+      geom_hline(yintercept = 0, linetype = 'dotted') +
+      ggtitle(title) 
   }
   
-  ### MD plot
-  message("plotting")
-  ggplot(df, aes(x = log(Average_expression), y = logFC, color = color)) +
-    geom_point() +
-    scale_colour_manual(values = c("1" = "red", "2" = "royalblue3", "3" = "grey")) +
-    geom_label_repel(aes(label = ID, size=1)) + 
-    theme_minimal() +
-    theme(legend.position = "none") +
-    geom_vline(xintercept = 0, linetype = 'dotted') +
-    geom_hline(yintercept = 0, linetype = 'dotted') +
-    ggtitle(title) +
-    geom_hline(yintercept = c(-logFC_criteria, logFC_criteria), 
-             color = "dodgerblue", linetype = 'solid', linewidth = 0.7)
+  if(with_line==F){
+    p
+  } else{
+    p + geom_hline(yintercept = c(-logFC_criteria, logFC_criteria), 
+                  color = "dodgerblue", linetype = 'solid', linewidth = 0.7)
+  }
 }
 
 # plotMD_kegg -------------------------------------------------------------
@@ -1092,8 +1148,7 @@ plotMD_kegg <- function(file_name, ID, title="",logFC_criteria = 1, only_DE=T,
   # filter data
   cat(c(" -> ",file_name,"/n"))
   df <- get_df(file_name ,all = T) %>% group_by(SYMBOL) %>%
-    filter(.,!(SYMBOL%in% c("havana","ensembl_havana","havana_tagene")),
-           geneBiotype=="protein_coding") %>% 
+    filter(geneBiotype=="protein_coding") %>%
     filter(.,SYMBOL %in% gene_list_even)%>%
     summarize(across(where(is.numeric), sum)) %>% na.omit() %>% 
     column_to_rownames(., var = "SYMBOL") %>% 
@@ -1113,9 +1168,7 @@ plotMD_kegg <- function(file_name, ID, title="",logFC_criteria = 1, only_DE=T,
   cat(c(" -> up:",up," -> down:",down, " -> non:",non,"\n"))
   if(only_DE==T){
     df <- df %>% filter(color==1|color==2)
-  }
-  if(up==0){
-    
+    cat(" -> only plot DEG")
   }
   
   ### MD plot
@@ -1187,52 +1240,4 @@ draw_survival <- function(gene){
   )
 }
 
-# plot_mutaRate -----------------------------------------------------------
-plot_mutaRate <- function(file_name, title="", logFC_criteria = 1, only_DE=T,
-                          list=c(),with_line=T){
-  df <- get_df(file_name ,all = T) %>% group_by(SYMBOL) %>%
-    filter(.,!(SYMBOL%in% c("havana","ensembl_havana","havana_tagene")),
-           geneBiotype=="protein_coding") %>% 
-    summarize(across(where(is.numeric), sum)) %>% na.omit() %>% 
-    column_to_rownames(., var = "SYMBOL") %>% 
-    rownames_to_column("ID") %>% 
-    .[,c(1,5,6,7,8)] %>% 
-    setNames(c("ID","treat","control","M","D"))%>% 
-    mutate(Average_expression =(treat+control)/2) %>% 
-    .[,c(1,4,6)] %>% setNames(c("ID","logFC","Average_expression")) %>% 
-    mutate(ID = ID, color = "3") %>% left_join(muta_rate,by = "ID") %>% 
-    mutate(color = if_else(logFC > logFC_criteria, '1', color)) %>%
-    mutate(color = if_else(logFC < logFC_criteria & logFC > negative(logFC_criteria), '3', color)) %>%   
-    mutate(color = if_else(logFC < negative(logFC_criteria), '2', color))
-  
-  if(length(list)!=0){
-    df <- df %>% filter(ID %in% list)
-    cat("cc")
-  }
-  
-  up <- df %>% filter(color==1) %>% nrow()
-  down <- df %>% filter(color==2) %>% nrow()
-  non <- df %>% filter(color==3) %>% nrow()
-  cat(c(" -> up:",up," -> down:",down, " -> non:",non,"\n"))
-  if(only_DE==T){
-    df <- df %>% filter(color == 1 | color == 2)
-  }
-  
-  ### MD plot
-  message("plotting")
-  p <- ggplot(df, aes(x = `mutation_ratio(%)`, y = logFC, color = color)) +
-    geom_point() +
-    scale_colour_manual(values = c("1" = "red", "2" = "royalblue3", "3" = "grey")) +
-    geom_label_repel(aes(label = ID, size=1)) + 
-    theme_minimal() +
-    theme(legend.position = "none") +
-    ggtitle(title) +
-    geom_hline(yintercept = c(-logFC_criteria, logFC_criteria), 
-               color = "dodgerblue", linetype = 'solid', linewidth = 0.7)
-  if(with_line==T){
-    p + geom_vline(xintercept = 0, linetype = 'dotted') +
-      geom_hline(yintercept = 0, linetype = 'dotted')
-  } else{
-    p
-  }
-}
+
