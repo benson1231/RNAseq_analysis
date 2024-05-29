@@ -979,7 +979,7 @@ run_TF <- function(file_name, title="", n_tfs=25){
 }
 
 # plot_TF -----------------------------------------------------------------
-plot_TF <- function(file_name, TF, title="", logFC_criteria = 1){
+plot_TF <- function(file_name, TF, title="", logFC_criteria = 1,plot=T){
   de <- get_df(file_name ,all = T) %>% group_by(SYMBOL) %>%
     summarize(across(where(is.numeric), sum)) %>% na.omit() %>% 
     column_to_rownames(., var = "SYMBOL") %>% 
@@ -1003,23 +1003,20 @@ plot_TF <- function(file_name, TF, title="", logFC_criteria = 1){
     mutate(color = if_else(logFC < logFC_criteria & logFC > negative(logFC_criteria), '2', color)) %>%   
     mutate(color = if_else(logFC < negative(logFC_criteria), '3', color)) 
   
+  if(plot==F){
+    return(df)
+  }
   ### MD plot
-  p <- ggplot(df, aes(x = log(Average_expression), y = logFC, color = color, size=abs(mor))) +
+  ggplot(df, aes(x = log(Average_expression), y = logFC, color = color, size=abs(mor))) +
     geom_point() +
-    scale_colour_manual(values = c("red","grey","royalblue3")) +
+    scale_colour_manual(values = c("1" = "red", "2" = "royalblue3", "3" = "grey")) +
     geom_label_repel(aes(label = ID, size=1)) + 
     theme_minimal() +
     theme(legend.position = "none") +
     geom_vline(xintercept = 0, linetype = 'dotted') +
     geom_hline(yintercept = 0, linetype = 'dotted') +
     ggtitle(paste(title,tf))
-  print(p)
-  return(df)
 }
-
-
-
-
 
 # get_divenn --------------------------------------------------------------
 get_divenn <- function(file_name, top=50,output_name="up_down.xlsx"){
@@ -1068,7 +1065,7 @@ plot_MD <- function(file_name, title="", logFC_criteria = 1, only_DE=F){
   message("plotting")
   ggplot(df, aes(x = log(Average_expression), y = logFC, color = color)) +
     geom_point() +
-    scale_colour_manual(values = c("red","royalblue3","grey")) +
+    scale_colour_manual(values = c("1" = "red", "2" = "royalblue3", "3" = "grey")) +
     geom_label_repel(aes(label = ID, size=1)) + 
     theme_minimal() +
     theme(legend.position = "none") +
@@ -1166,4 +1163,76 @@ draw_bar <- function(gene){
          y = "Expression Level(CPM)") +
     theme_minimal() +
     theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5))
+}
+
+
+# draw_survival -----------------------------------------------------------
+draw_survival <- function(gene){
+  mutation_samples <- subset(maf_object@data, Hugo_Symbol == gene)$Tumor_Sample_Barcode
+  # 提取了樣本ID的前12個字符，用於後續臨床樣本配對
+  mutation_samples_short <- substr(mutation_samples, 1, 12)
+  length(mutation_samples_short)
+  head(mutation_samples_short)
+  # 新增紀錄突變狀態的欄位
+  clin.LUAD$mutation_status <- ifelse(clin.LUAD$submitter_id %in% mutation_samples_short, "Mutated", "Wildtype")
+  # plotting
+  TCGAanalyze_survival(
+    data = clin.LUAD,
+    clusterCol = "mutation_status",
+    main = "TCGA Set\n LUAD",
+    height = 10,
+    width=10,
+    legend = gene_of_interest, 
+    filename = paste0("output/",gene,"_survival.pdf")
+  )
+}
+
+# plot_mutaRate -----------------------------------------------------------
+plot_mutaRate <- function(file_name, title="", logFC_criteria = 1, only_DE=T,
+                          list=c(),with_line=T){
+  df <- get_df(file_name ,all = T) %>% group_by(SYMBOL) %>%
+    filter(.,!(SYMBOL%in% c("havana","ensembl_havana","havana_tagene")),
+           geneBiotype=="protein_coding") %>% 
+    summarize(across(where(is.numeric), sum)) %>% na.omit() %>% 
+    column_to_rownames(., var = "SYMBOL") %>% 
+    rownames_to_column("ID") %>% 
+    .[,c(1,5,6,7,8)] %>% 
+    setNames(c("ID","treat","control","M","D"))%>% 
+    mutate(Average_expression =(treat+control)/2) %>% 
+    .[,c(1,4,6)] %>% setNames(c("ID","logFC","Average_expression")) %>% 
+    mutate(ID = ID, color = "3") %>% left_join(muta_rate,by = "ID") %>% 
+    mutate(color = if_else(logFC > logFC_criteria, '1', color)) %>%
+    mutate(color = if_else(logFC < logFC_criteria & logFC > negative(logFC_criteria), '3', color)) %>%   
+    mutate(color = if_else(logFC < negative(logFC_criteria), '2', color))
+  
+  if(length(list)!=0){
+    df <- df %>% filter(ID %in% list)
+    cat("cc")
+  }
+  
+  up <- df %>% filter(color==1) %>% nrow()
+  down <- df %>% filter(color==2) %>% nrow()
+  non <- df %>% filter(color==3) %>% nrow()
+  cat(c(" -> up:",up," -> down:",down, " -> non:",non,"\n"))
+  if(only_DE==T){
+    df <- df %>% filter(color == 1 | color == 2)
+  }
+  
+  ### MD plot
+  message("plotting")
+  p <- ggplot(df, aes(x = `mutation_ratio(%)`, y = logFC, color = color)) +
+    geom_point() +
+    scale_colour_manual(values = c("1" = "red", "2" = "royalblue3", "3" = "grey")) +
+    geom_label_repel(aes(label = ID, size=1)) + 
+    theme_minimal() +
+    theme(legend.position = "none") +
+    ggtitle(title) +
+    geom_hline(yintercept = c(-logFC_criteria, logFC_criteria), 
+               color = "dodgerblue", linetype = 'solid', linewidth = 0.7)
+  if(with_line==T){
+    p + geom_vline(xintercept = 0, linetype = 'dotted') +
+      geom_hline(yintercept = 0, linetype = 'dotted')
+  } else{
+    p
+  }
 }
