@@ -78,33 +78,33 @@ draw_heatmap <- function(file=file,
   
   # select groups
   if(groups == "AS"){
-    data_mat <- mat %>% select(all_of(name_df$group_name[AS]))
+    data_mat <- mat %>% dplyr::select(all_of(name_df$group_name[AS]))
     ann <- list(agent = c('CON' = '#E0E0E0', 'DMS' = '#ADADAD', 'BAP' = '#00DB00',
                           'AS' = '#FFFF37', 'AS_BAP' = '#FFDC35'),
                 clone = c('WT' = '#0080FF', 'L858R' = '#00FF00',
                           'Del19' = '#FF8800', 'YAP' = '#FF44AA'))
   } else if(groups == "CO"){
-    data_mat <- mat %>% select(all_of(name_df$group_name[CO]))
+    data_mat <- mat %>% dplyr::select(all_of(name_df$group_name[CO]))
     ann <- list(agent = c('CON' = '#E0E0E0', 'DMS' = '#ADADAD', 'BAP' = '#00DB00',
                           'CO' = '#FF5151', 'CO_BAP' = '#EA0000'),
                 clone = c('WT' = '#0080FF', 'L858R' = '#00FF00',
                           'Del19' = '#FF8800', 'YAP' = '#FF44AA'))
   } else if(groups == "CD"){
-    data_mat <- mat %>% select(all_of(name_df$group_name[CD]))
+    data_mat <- mat %>% dplyr::select(all_of(name_df$group_name[CD]))
     ann <- list(agent = c('CON' = '#E0E0E0', 'DMS' = '#ADADAD', 'BAP' = '#00DB00',
                           'LCD' = '#0080FF', 'HCD' = '#005AB5', 
                           'LCD_BAP' = '#0000E3', 'HCD_BAP' = '#000079'),
                 clone = c('WT' = '#0080FF', 'L858R' = '#00FF00',
                           'Del19' = '#FF8800', 'YAP' = '#FF44AA'))
   } else if(groups == "BAP"){
-    data_mat <- mat %>% select(all_of(name_df$group_name[BAP]))
+    data_mat <- mat %>% dplyr::select(all_of(name_df$group_name[BAP]))
     ann <- list(agent = c('CON' = '#E0E0E0', 'DMS' = '#ADADAD', 'BAP' = '#00DB00',
                           'AS_BAP' = '#FFDC35', 'CO_BAP' = '#EA0000',
                           'LCD_BAP' = '#0000E3', 'HCD_BAP' = '#000079'),
                 clone = c('WT' = '#0080FF', 'L858R' = '#00FF00',
                           'Del19' = '#FF8800', 'YAP' = '#FF44AA'))
   } else if(groups == "ALL"){
-    data_mat <- mat %>% select(all_of(name_df$group_name))
+    data_mat <- mat %>% dplyr::select(all_of(name_df$group_name))
     ann <- list(agent = c('CON' = '#E0E0E0', 'DMS' = '#ADADAD', 'AZA' = '#FFD2D2', 'DAC' = '#FF9797',
                           'BAP' = '#00DB00','AS' = '#FFFF37', 'CO' = '#FF5151',
                           'LCD' = '#0080FF', 'HCD' = '#005AB5', 
@@ -113,33 +113,33 @@ draw_heatmap <- function(file=file,
                 clone = c('WT' = '#0080FF', 'L858R' = '#00FF00',
                           'Del19' = '#FF8800', 'YAP' = '#FF44AA'))
   } else if(groups == "only_CO"){
-    data_mat <- mat %>% select(all_of(name_df$group_name[only_CO]))
+    data_mat <- mat %>% dplyr::select(all_of(name_df$group_name[only_CO]))
     ann <- list(agent = c('BAP' = '#00DB00','CO' = '#FF5151', 'CO_BAP' = '#EA0000'),
                 clone = c('WT' = '#0080FF', 'L858R' = '#00FF00',
                           'Del19' = '#FF8800', 'YAP' = '#FF44AA'))
   } else if(groups == "only_AS"){
-    data_mat <- mat %>% select(all_of(name_df$group_name[only_AS]))
+    data_mat <- mat %>% dplyr::select(all_of(name_df$group_name[only_AS]))
     ann <- list(agent = c('BAP' = '#00DB00', 'AS' = '#FFFF37', 'AS_BAP' = '#FFDC35'),
                 clone = c('WT' = '#0080FF', 'L858R' = '#00FF00',
                           'Del19' = '#FF8800', 'YAP' = '#FF44AA'))
   } else if(groups == "only_LCD"){
-    data_mat <- mat %>% select(all_of(name_df$group_name[only_LCD]))
+    data_mat <- mat %>% dplyr::select(all_of(name_df$group_name[only_LCD]))
     ann <- list(agent = c('BAP' = '#00DB00', 'LCD' = '#0080FF',  'LCD_BAP' = '#0000E3'),
                 clone = c('WT' = '#0080FF', 'L858R' = '#00FF00',
                           'Del19' = '#FF8800', 'YAP' = '#FF44AA'))
   } else if(groups == "only_HCD"){
-    data_mat <- mat %>% select(name_df$group_name[only_HCD])
+    data_mat <- mat %>% dplyr::select(name_df$group_name[only_HCD])
     ann <- list(agent = c('BAP' = '#00DB00','HCD' = '#005AB5', 'HCD_BAP' = '#000079'),
                 clone = c('WT' = '#0080FF', 'L858R' = '#00FF00',
                           'Del19' = '#FF8800', 'YAP' = '#FF44AA'))
   } else if(groups == "only_CD"){
-    data_mat <- mat %>% select(all_of(name_df$group_name[only_CD]))
+    data_mat <- mat %>% dplyr::select(all_of(name_df$group_name[only_CD]))
     ann <- list(agent = c('BAP' = '#00DB00','LCD' = '#0080FF', 'HCD' = '#005AB5',
                           'LCD_BAP' = '#0000E3', 'HCD_BAP' = '#000079'),
                 clone = c('WT' = '#0080FF', 'L858R' = '#00FF00',
                           'Del19' = '#FF8800', 'YAP' = '#FF44AA'))
   } else if(groups == "CON"){
-    data_mat <- mat %>% select(all_of(name_df$group_name[CON]))
+    data_mat <- mat %>% dplyr::select(all_of(name_df$group_name[CON]))
     ann <- list(agent = c('CON' = '#E0E0E0', 'DMS' = '#ADADAD'),
                 clone = c('WT' = '#0080FF', 'L858R' = '#00FF00',
                           'Del19' = '#FF8800', 'YAP' = '#FF44AA'))
@@ -191,12 +191,13 @@ draw_heatmap <- function(file=file,
 draw_from_list <- function(list,
                            groups="ALL",
                            id="SYMBOL",
-                           cluster=TRUE,
+                           row_cluster=TRUE,
                            anno=TRUE,
                            title="",
                            show_row_names = TRUE, # ENSEMBL/SYMBOL
                            label_num=F,
-                           log_scale=FALSE
+                           log_scale=FALSE,
+                           col_cluster=FALSE
                            ){
   if(!(groups%in%c("AS","CO","LCD","HCD","CD","BAP","only_AS","only_CO",
                   "only_LCD","only_HCD","only_CD","CON","ALL"))){
@@ -233,33 +234,33 @@ draw_from_list <- function(list,
   
   # select groups
   if(groups == "AS"){
-    data_mat <- mat %>% select(all_of(name_df$group_name[AS]))
+    data_mat <- mat %>% dplyr::select(all_of(name_df$group_name[AS]))
     ann <- list(agent = c('CON' = '#E0E0E0', 'DMS' = '#ADADAD', 'BAP' = '#00DB00',
                           'AS' = '#FFFF37', 'AS_BAP' = '#FFDC35'),
                 clone = c('WT' = '#0080FF', 'L858R' = '#00FF00',
                           'Del19' = '#FF8800', 'YAP' = '#FF44AA'))
   } else if(groups == "CO"){
-    data_mat <- mat %>% select(all_of(name_df$group_name[CO]))
+    data_mat <- mat %>% dplyr::select(all_of(name_df$group_name[CO]))
     ann <- list(agent = c('CON' = '#E0E0E0', 'DMS' = '#ADADAD', 'BAP' = '#00DB00',
                           'CO' = '#FF5151', 'CO_BAP' = '#EA0000'),
                 clone = c('WT' = '#0080FF', 'L858R' = '#00FF00',
                           'Del19' = '#FF8800', 'YAP' = '#FF44AA'))
   } else if(groups == "CD"){
-    data_mat <- mat %>% select(all_of(name_df$group_name[CD]))
+    data_mat <- mat %>% dplyr::select(all_of(name_df$group_name[CD]))
     ann <- list(agent = c('CON' = '#E0E0E0', 'DMS' = '#ADADAD', 'BAP' = '#00DB00',
                           'LCD' = '#0080FF', 'HCD' = '#005AB5', 
                           'LCD_BAP' = '#0000E3', 'HCD_BAP' = '#000079'),
                 clone = c('WT' = '#0080FF', 'L858R' = '#00FF00',
                           'Del19' = '#FF8800', 'YAP' = '#FF44AA'))
   } else if(groups == "BAP"){
-    data_mat <- mat %>% select(all_of(name_df$group_name[BAP]))
+    data_mat <- mat %>% dplyr::select(all_of(name_df$group_name[BAP]))
     ann <- list(agent = c('CON' = '#E0E0E0', 'DMS' = '#ADADAD', 'BAP' = '#00DB00',
                           'AS_BAP' = '#FFDC35', 'CO_BAP' = '#EA0000',
                           'LCD_BAP' = '#0000E3', 'HCD_BAP' = '#000079'),
                 clone = c('WT' = '#0080FF', 'L858R' = '#00FF00',
                           'Del19' = '#FF8800', 'YAP' = '#FF44AA'))
   } else if(groups == "ALL"){
-    data_mat <- mat %>% select(all_of(name_df$group_name))
+    data_mat <- mat %>% dplyr::select(all_of(name_df$group_name))
     ann <- list(agent = c('CON' = '#E0E0E0', 'DMS' = '#ADADAD', 'AZA' = '#FFD2D2', 'DAC' = '#FF9797',
                           'BAP' = '#00DB00','AS' = '#FFFF37', 'CO' = '#FF5151',
                           'LCD' = '#0080FF', 'HCD' = '#005AB5', 
@@ -268,33 +269,33 @@ draw_from_list <- function(list,
                 clone = c('WT' = '#0080FF', 'L858R' = '#00FF00',
                           'Del19' = '#FF8800', 'YAP' = '#FF44AA'))
   } else if(groups == "only_CO"){
-    data_mat <- mat %>% select(all_of(name_df$group_name[only_CO]))
+    data_mat <- mat %>% dplyr::select(all_of(name_df$group_name[only_CO]))
     ann <- list(agent = c('BAP' = '#00DB00','CO' = '#FF5151', 'CO_BAP' = '#EA0000'),
                 clone = c('WT' = '#0080FF', 'L858R' = '#00FF00',
                           'Del19' = '#FF8800', 'YAP' = '#FF44AA'))
   } else if(groups == "only_AS"){
-    data_mat <- mat %>% select(all_of(name_df$group_name[only_AS]))
+    data_mat <- mat %>% dplyr::select(all_of(name_df$group_name[only_AS]))
     ann <- list(agent = c('BAP' = '#00DB00', 'AS' = '#FFFF37', 'AS_BAP' = '#FFDC35'),
                 clone = c('WT' = '#0080FF', 'L858R' = '#00FF00',
                           'Del19' = '#FF8800', 'YAP' = '#FF44AA'))
   } else if(groups == "only_LCD"){
-    data_mat <- mat %>% select(all_of(name_df$group_name[only_LCD]))
+    data_mat <- mat %>% dplyr::select(all_of(name_df$group_name[only_LCD]))
     ann <- list(agent = c('BAP' = '#00DB00', 'LCD' = '#0080FF',  'LCD_BAP' = '#0000E3'),
                 clone = c('WT' = '#0080FF', 'L858R' = '#00FF00',
                           'Del19' = '#FF8800', 'YAP' = '#FF44AA'))
   } else if(groups == "only_HCD"){
-    data_mat <- mat %>% select(name_df$group_name[only_HCD])
+    data_mat <- mat %>% dplyr::select(name_df$group_name[only_HCD])
     ann <- list(agent = c('BAP' = '#00DB00','HCD' = '#005AB5', 'HCD_BAP' = '#000079'),
                 clone = c('WT' = '#0080FF', 'L858R' = '#00FF00',
                           'Del19' = '#FF8800', 'YAP' = '#FF44AA'))
   } else if(groups == "only_CD"){
-    data_mat <- mat %>% select(all_of(name_df$group_name[only_CD]))
+    data_mat <- mat %>% dplyr::select(all_of(name_df$group_name[only_CD]))
     ann <- list(agent = c('BAP' = '#00DB00','LCD' = '#0080FF', 'HCD' = '#005AB5',
                           'LCD_BAP' = '#0000E3', 'HCD_BAP' = '#000079'),
                 clone = c('WT' = '#0080FF', 'L858R' = '#00FF00',
                           'Del19' = '#FF8800', 'YAP' = '#FF44AA'))
   } else if(groups == "CON"){
-    data_mat <- mat %>% select(all_of(name_df$group_name[CON]))
+    data_mat <- mat %>% dplyr::select(all_of(name_df$group_name[CON]))
     ann <- list(agent = c('CON' = '#E0E0E0', 'DMS' = '#ADADAD'),
                 clone = c('WT' = '#0080FF', 'L858R' = '#00FF00',
                           'Del19' = '#FF8800', 'YAP' = '#FF44AA'))
@@ -332,34 +333,36 @@ draw_from_list <- function(list,
   
   if(anno==T){
     if(label_num==T){
-      ComplexHeatmap::Heatmap(mat_scale, top_annotation = ha, cluster_columns = F, 
+      ComplexHeatmap::Heatmap(mat_scale, top_annotation = ha, 
+                              cluster_columns = col_cluster, 
                               show_row_names = show_row_names,
-                              show_column_names = F,cluster_rows = cluster,
-                              col = col_fun,
+                              show_column_names = F,cluster_rows = row_cluster,
+                              col = col_fun, 
                               name = "Z-score", row_title = title,
                               cell_fun = function(j, i, x, y, width, height, fill) {
                                 grid.text(sprintf("%.1f", mat_scale[i, j]), x, y, gp = gpar(fontsize = 10))
                               })
     }else{
-      ComplexHeatmap::Heatmap(mat_scale, top_annotation = ha, cluster_columns = F, 
+      ComplexHeatmap::Heatmap(mat_scale, top_annotation = ha, 
+                              cluster_columns = col_cluster, 
                               show_row_names = show_row_names,col = col_fun,
-                              show_column_names = F,cluster_rows = cluster,
+                              show_column_names = F,cluster_rows = row_cluster,
                               name = "Z-score", row_title = title
                               )
     }
   } else{
     if(label_num==T){
-      ComplexHeatmap::Heatmap(mat_scale, cluster_columns = F, 
+      ComplexHeatmap::Heatmap(mat_scale, cluster_columns = col_cluster, 
                               show_row_names = show_row_names,col = col_fun,
-                              show_column_names = F,cluster_rows = cluster,
+                              show_column_names = F,cluster_rows = row_cluster,
                               name = "Z-score", row_title = title,
                               cell_fun = function(j, i, x, y, width, height, fill) {
                                 grid.text(sprintf("%.1f", mat_scale[i, j]), x, y, gp = gpar(fontsize = 10))
                               })
     }else{
-      ComplexHeatmap::Heatmap(mat_scale, cluster_columns = F, 
+      ComplexHeatmap::Heatmap(mat_scale, cluster_columns = col_cluster, 
                               show_row_names = show_row_names,col = col_fun,
-                              show_column_names = F,cluster_rows = cluster,
+                              show_column_names = F,cluster_rows = row_cluster,
                               name = "Z-score", row_title = title,
                               )
     }
@@ -378,38 +381,27 @@ get_deg <- function(file=file,
   if (!(type %in% c("ENTREZID", "ENSEMBL", "SYMBOL"))) {
     stop("Invalid type. Allowed values are 'ENTREZID','ENSEMBL'or 'SYMBOL'.")
   }
-  
-  cat(c(" -> load data from",file.path(data_path, file),"\n"))
+  cat(c(" -> load data from", file,"\n"))
   raw_data <- readxl::read_xlsx(file.path(data_path, file)) # 讀檔
-  
-  # 根據不同的類型選擇相應的欄位名稱
-  if(type == "ENTREZID") {
-    id_col <- "ENTREZID"
-  } else if(type == "ENSEMBL") {
-    id_col <- "ENSEMBL"
-  } else{
-    id_col <- "SYMBOL"
-  }
-  
+
   # 處理資料
   data <- raw_data %>%
-    as.data.frame() %>% 
-    filter(geneBiotype=="protein_coding") %>% 
-    select(all_of(id_col),M) %>%
-    group_by(across(all_of(id_col))) %>%
-    summarize(across(where(is.numeric), mean)) %>%
-    arrange(desc(M))
+    as.data.frame() %>%
+    filter(geneBiotype == "protein_coding") %>%
+    dplyr::select(!!sym(type), M) %>%
+    group_by(!!sym(type)) %>%
+    summarize(across(where(is.numeric), sum))
   
   if(top=="all"){
     if(dir=="all"){
       data <- data %>% filter(M >log_crit[1]| M < log_crit[2])
-      cat(c(" -> abs(log2FC) larger than", log_crit[1],"->",length(data$M),"genes.\n"))
+      cat(c(" -> abs(log2FC) larger than", log_crit[1],"->",nrow(data),"genes.\n"))
     }else if(dir=="up"){
       data <- data %>% filter(M > log_crit[1])
-      cat(c(" -> log2FC larger than", log_crit[1],"->",length(data$M),"genes.\n"))
+      cat(c(" -> log2FC larger than", log_crit[1],"->",nrow(data),"genes.\n"))
     }else if(dir=="down"){
       data <- data %>% filter(M < log_crit[2])
-      cat(c(" -> log2FC smaller than", log_crit[2],"->",length(data$M),"genes.\n"))
+      cat(c(" -> log2FC smaller than", log_crit[2],"->",nrow(data),"genes.\n"))
     }else{
       cat(c("<- error, check direction", "\n"))
       return(NULL)
@@ -418,15 +410,15 @@ get_deg <- function(file=file,
     if(dir=="all"){
       data <- data %>% filter(M >log_crit[1]| M < log_crit[2]) %>% 
         arrange(desc(abs(M))) %>% .[1:top,]
-      cat(c(" -> abs(log2FC) larger than",log_crit[1],"->",length(data$M),"genes.\n"))
+      cat(c(" -> abs(log2FC) larger than",log_crit[1],"->",nrow(data),"genes.\n"))
     }else if(dir=="up"){
       data <- data %>% filter(M > log_crit[1]) %>% 
         arrange(desc(abs(M))) %>% .[1:top,]
-      cat(c(" -> log2FC larger than", log_crit[1],"->",length(data$M),"genes.\n"))
+      cat(c(" -> log2FC larger than", log_crit[1],"->",nrow(data),"genes.\n"))
     }else if(dir=="down"){
       data <- data %>% filter(M < log_crit[2]) %>% 
         arrange(desc(abs(M))) %>% .[1:top,]
-      cat(c(" -> log2FC smaller than", log_crit[2],"->",length(data$M),"genes.\n"))
+      cat(c(" -> log2FC smaller than", log_crit[2],"->",nrow(data),"genes.\n"))
     }else{
       cat(c("<- error, check direction", "\n"))
       return(NULL)
@@ -441,7 +433,6 @@ get_deg <- function(file=file,
   }else{
     list <- data$SYMBOL
   }
-  
   return(list)
 }
 
@@ -459,7 +450,7 @@ get_list <- function(file_name,
   # 根據不同的類型選擇相應的欄位名稱
   if (type == "ENTREZID") {
     id_col <- "ENTREZID"
-  } else (type == "ENSEMBL"){
+  } else if (type == "ENSEMBL"){
     id_col <- "ENSEMBL"
   } else {
     id_col <- "SYMBOL"
@@ -468,7 +459,7 @@ get_list <- function(file_name,
   # 處理資料
   df <- raw_df %>% as.data.frame() %>% 
     filter(geneBiotype=="protein_coding") %>%
-    select(all_of(id_col),M) %>%
+    dplyr::select(all_of(id_col),M) %>%
     group_by(across(all_of(id_col))) %>%
     summarize(across(where(is.numeric), mean)) %>%
     arrange(desc(M))  %>%
@@ -606,7 +597,7 @@ get_df <- function(file,
                    ){
   if(all==TRUE){
     df <- readxl::read_xlsx(file.path(data_path, file)) %>% as.data.frame()
-    cat(c(" -> raw data from ",file))
+    cat(c(" -> raw data from ",file,"\n"))
     return(df)
   }
   
@@ -616,21 +607,21 @@ get_df <- function(file,
         as.data.frame() %>% 
         filter(geneBiotype=="protein_coding") %>%
         filter(abs(M) > log_crit[1]) %>% 
-        select(M, SYMBOL) %>% 
+        dplyr::select(M, SYMBOL) %>% 
         setNames(c("logFC","gene"))
     }else if(dir=="up"){
       df <- readxl::read_xlsx(file.path(data_path, file)) %>% 
         as.data.frame() %>% 
         filter(geneBiotype=="protein_coding") %>%
         filter(M > log_crit[1]) %>% 
-        select(M, SYMBOL) %>% 
+        dplyr::select(M, SYMBOL) %>% 
         setNames(c("logFC","gene"))
     }else if(dir=="down"){
       df <- readxl::read_xlsx(file.path(data_path, file)) %>% 
         as.data.frame() %>% 
         filter(geneBiotype=="protein_coding") %>%
         filter(M < log_crit[2]) %>% 
-        select(M, SYMBOL) %>% 
+        dplyr::select(M, SYMBOL) %>% 
         setNames(c("logFC","gene"))
     }else{
       cat(c("<- error, check direction", "\n"))
@@ -646,14 +637,14 @@ get_df <- function(file,
         as.data.frame() %>% 
         filter(geneBiotype=="protein_coding") %>%
         filter(ENSEMBL %in% list) %>% 
-        select(M,D, SYMBOL) %>% 
+        dplyr::select(M,D, SYMBOL) %>% 
         setNames(c("logFC","D","gene"))
     } else{
       df <- readxl::read_xlsx(file.path(data_path, file)) %>% 
         as.data.frame() %>% 
         filter(geneBiotype=="protein_coding") %>%
         filter(ENSEMBL %in% list) %>% 
-        select(M, SYMBOL) %>% 
+        dplyr::select(M, SYMBOL) %>% 
         setNames(c("logFC","gene"))
     }
     
@@ -767,16 +758,19 @@ run_reactome <- function(file_name, dir="up",log_crit=1,
   return(de_pathway)
 }
 # get_p -------------------------------------------------------------------
-get_p <- function(x, group_name, top=10, p_value_cutoff = 0.01){
+get_p <- function(x, group_name, top=0, p_value_cutoff = 0.01){
   pvalue <- x@result %>% .[,c("Description","pvalue")] %>% 
     filter(pvalue < p_value_cutoff) %>% 
-    setNames(c("Description",group_name)) %>% head(top)
+    setNames(c("Description",group_name))
+  if(top != 0){
+    pvalue <- pvalue %>% head(top) 
+  }
   return(pvalue)
 }
 
 # plot_heatmap ------------------------------------------------------------
 plot_heatmap <- function(file_list, group_names, analysis, dir="up",
-                         col_title="", row_title="") {
+                         col_title="", row_title="",top=20) {
   # 檢查參數是否匹配
   if (length(file_list) != length(group_names)) {
     stop("file_list and group_names must have the same length")
@@ -794,11 +788,14 @@ plot_heatmap <- function(file_list, group_names, analysis, dir="up",
   
   # 合併所有數據框
   combined_df <- Reduce(function(x, y) full_join(x, y, by = "Description"), processed_dfs) %>% 
-    column_to_rownames("Description") %>% 
-    as.matrix()
+    column_to_rownames("Description") %>% as.matrix()
+  # 計算na值
+  non_NA_count <- rowSums(!is.na(combined_df)) %>% sort(.,decreasing = T)
   
   # 計算 -log10(P) 值
   mat <- log10(combined_df) %>% -.
+  mat <- mat[names(non_NA_count), ] %>% head(top)
+  rownames(mat) <- factor(rownames(mat), levels = names(non_NA_count))
   
   # 繪製熱圖
   if(dir=="up"){
@@ -949,7 +946,7 @@ plot_pathway <- function(file_name, pathway, title="",logFC_criteria = 1){
 }
 
 # run_TF ------------------------------------------------------------------
-run_TF <- function(file_name, title="", n_tfs=25){
+run_TF <- function(file_name, title="", n_tfs=25, plot=T){
   ### two groups comparing TFs
   de_FC <- get_df(file_name ,de=T) %>% group_by(gene) %>%
     summarize(across(where(is.numeric), sum)) %>% na.omit() %>% 
@@ -970,8 +967,11 @@ run_TF <- function(file_name, title="", n_tfs=25){
     head(n_tfs) %>%
     pull(source)
   f_contrast_TF <- f_contrast_TF %>%
-    filter(source %in% tfs)
-  
+    filter(source %in% tfs) %>% 
+    arrange(desc(score))
+  if(plot==F){
+    return(f_contrast_TF)
+  }
   ### TF enrich plot
   ggplot(f_contrast_TF, aes(x = reorder(source, score), y = score)) + 
     geom_bar(aes(fill = score), stat = "identity") +
@@ -988,7 +988,7 @@ run_TF <- function(file_name, title="", n_tfs=25){
 }
 
 # plot_TF -----------------------------------------------------------------
-plot_TF <- function(file_name, TF, title="", logFC_criteria = 1,plot=T,
+plot_TF <- function(file_name, TF, title="", logFC_criteria = 1,
                     with_line=T,plot_type=1){
   if(!(plot_type%in%c(1,2))){
     stop(" -> 'plot_type' must be '1' or '2'. 1: MD plot. 2: mutation rate M plot.")
@@ -1017,9 +1017,6 @@ plot_TF <- function(file_name, TF, title="", logFC_criteria = 1,plot=T,
     mutate(color = if_else(logFC < logFC_criteria & logFC > negative(logFC_criteria), '3', color)) %>%   
     mutate(color = if_else(logFC < negative(logFC_criteria), '2', color)) %>% 
     mutate(dir = ifelse(mor > 0, "1", "2"))
-  if(plot==F){
-    return(df)
-  }
   ### MD plot
   if(plot_type==1){
     p <- ggplot(df, aes(x = log(Average_expression), y = logFC, color = color, size=abs(mor))) +
@@ -1043,11 +1040,11 @@ plot_TF <- function(file_name, TF, title="", logFC_criteria = 1,plot=T,
       ggtitle(paste(title,tf))
   }
   if(with_line==T){
-    p + geom_hline(yintercept = c(-logFC_criteria, logFC_criteria), 
+    p <- p + geom_hline(yintercept = c(-logFC_criteria, logFC_criteria), 
                    color = "dodgerblue", linetype = 'solid', linewidth = 0.7)
-  } else{
-    p
-  }
+    }
+  print(p)
+  return(df)
 }
 
 # get_divenn --------------------------------------------------------------
@@ -1061,7 +1058,7 @@ get_divenn <- function(file_name, top=50,output_name="up_down.xlsx"){
       M < 1 & M > -1 ~ 3,
       M <= -1 ~ 2 )) %>% 
     filter(., direaction != 3) %>% 
-    select(SYMBOL, direaction)
+    dplyr::select(SYMBOL, direaction)
   output_dir <- output_dir
   write.xlsx(df, file.path(output_dir,output_name))
   cat(c(" -> ",output_dir,"\n -> ",output_name))
@@ -1071,6 +1068,9 @@ get_divenn <- function(file_name, top=50,output_name="up_down.xlsx"){
 # plot_MD -----------------------------------------------------------------
 plot_MD <- function(file_name, title="", logFC_criteria = 1, only_DE=T,
                     list=c(),with_line=T,plot_type=1){
+  if(!(plot_type%in%c(1,2))){
+    stop(" -> 'plot_type' must be '1' or '2'. 1: MD plot. 2: logFC and TCGA-mutation-rate plot.")
+  }
   df <- get_df(file_name ,all = T) %>% group_by(SYMBOL) %>%
     filter(.,!(SYMBOL%in% c("havana","ensembl_havana","havana_tagene")),
            geneBiotype=="protein_coding") %>% 
@@ -1081,14 +1081,14 @@ plot_MD <- function(file_name, title="", logFC_criteria = 1, only_DE=T,
     setNames(c("ID","treat","control","M","D"))%>% 
     mutate(Average_expression =(treat+control)/2) %>% 
     .[,c(1,4,6)] %>% setNames(c("ID","logFC","Average_expression")) %>% 
-    mutate(ID = ID, color = "3") %>% left_join(muta_rate,by = "ID") %>% 
+    mutate(ID = ID, color = "3") %>% 
     mutate(color = if_else(logFC > logFC_criteria, '1', color)) %>%
     mutate(color = if_else(logFC < logFC_criteria & logFC > negative(logFC_criteria), '3', color)) %>%   
     mutate(color = if_else(logFC < negative(logFC_criteria), '2', color))
   # if list was given, filter genes in list 
   if(length(list)!=0){
     df <- df %>% filter(ID %in% list)
-    cat(c(" -> filter ",length(list)," genes in input list."))
+    cat(c(" -> filter ",length(list)," genes in input list.\n"))
   }
   # calculate number of up/down regulation
   up <- df %>% filter(color==1) %>% nrow()
@@ -1097,7 +1097,7 @@ plot_MD <- function(file_name, title="", logFC_criteria = 1, only_DE=T,
   cat(c(" -> up:",up," -> down:",down, " -> non:",non,"\n"))
   if(only_DE==T){
     df <- df %>% filter(color == 1 | color == 2)
-    cat(" -> only plot DEG")
+    cat(" -> only plot DEG\n")
   }
   ### MD plot
   if(plot_type==1){
@@ -1112,7 +1112,8 @@ plot_MD <- function(file_name, title="", logFC_criteria = 1, only_DE=T,
       geom_hline(yintercept = 0, linetype = 'dotted') +
       ggtitle(title) 
   } else{
-    message("plotting logFC_mutation rate plot")
+    df <- df %>% left_join(muta_rate,by = "ID")
+    message("plotting logFC and TCGA-mutation-rate plot")
     p <- ggplot(df, aes(x = `mutation_ratio(%)`, y = logFC, color = color))  +
       geom_point() +
       scale_colour_manual(values = c("1" = "red", "2" = "royalblue3", "3" = "grey")) +
@@ -1192,7 +1193,10 @@ plotMD_kegg <- function(file_name, ID, title="",logFC_criteria = 1, only_DE=T,
 }
 
 # draw_bar ----------------------------------------------------------------
-draw_bar <- function(gene){
+draw_bar <- function(gene, group="ALL"){
+  if(!(group %in% c("AS","CO","CD","ALL"))){
+    stop(" -> group must be 'AS','CO','CD' or 'ALL'.")
+  }
   mat <- abbr_count %>%
     rownames_to_column("ENSEMBL") %>% 
     left_join(.,gene_df, by="ENSEMBL") %>% 
@@ -1200,13 +1204,22 @@ draw_bar <- function(gene){
     group_by(SYMBOL) %>%
     summarize(across(where(is.numeric), sum)) %>%  
     column_to_rownames(., var = "SYMBOL") 
+  if(group=="AS"){
+    mat <- mat %>% dplyr::select(name_df$abbreviate[AS])
+  } else if(group=="CO"){
+    mat <- mat %>% dplyr::select(name_df$abbreviate[CO])
+  } else if(group=="CD"){ 
+    mat <- mat %>% dplyr::select(name_df$abbreviate[CD])
+  } else {
+    mat
+  }
   mat_t <- t(mat) %>%  as.data.frame() %>% rownames_to_column("ID") %>% 
     setNames(c("ID","CPM"))
   mat_t$ID <- factor(mat_t$ID, levels = mat_t$ID)
   # 绘制条形图
   clone = c('WT' = '#0080FF', 'L858R' = '#00FF00',
             'Del19' = '#FF69B4', 'YAP' = '#FF8000')
-  mat_t$clone <- rep(c("WT", "L858R", "Del19", "YAP"), each = 13)
+  mat_t$clone <- rep(c("WT", "L858R", "Del19", "YAP"), each = nrow(mat_t)/4)
   # 绘制条形图
   ggplot(mat_t, aes(x = ID, y = CPM, fill = clone)) +
     geom_bar(stat = "identity") +
@@ -1229,15 +1242,51 @@ draw_survival <- function(gene){
   # 新增紀錄突變狀態的欄位
   clin.LUAD$mutation_status <- ifelse(clin.LUAD$submitter_id %in% mutation_samples_short, "Mutated", "Wildtype")
   # plotting
-  TCGAanalyze_survival(
+  TCGAbiolinks::TCGAanalyze_survival(
     data = clin.LUAD,
     clusterCol = "mutation_status",
     main = "TCGA Set\n LUAD",
     height = 10,
     width=10,
-    legend = gene_of_interest, 
+    legend = gene, 
     filename = paste0("output/",gene,"_survival.pdf")
   )
 }
 
-
+# multi_venn --------------------------------------------------------------
+multi_venn <- function(file_list, dir="up", upset=FALSE, title=""){
+  # get 4 clone
+  W <- get_deg(file_list[1], log_crit = c(1,-1), dir = dir,type = "SYMBOL")
+  L <- get_deg(file_list[2], log_crit = c(1,-1), dir = dir,type = "SYMBOL")
+  D <- get_deg(file_list[3], log_crit = c(1,-1), dir = dir,type = "SYMBOL")
+  Y <- get_deg(file_list[4], log_crit = c(1,-1), dir = dir,type = "SYMBOL")
+  # venn diagram list
+  venn_list <- list(W = W, L = L, D = D, Y = Y)
+  # venn diagram
+  if(dir=="up"){
+    if(upset==T){
+      p <- ggVennDiagram(venn_list,label_percent_digit = 1,label_alpha = 0, force_upset = T)
+    } else {
+      p <- ggVennDiagram(venn_list,label_percent_digit = 1,label_alpha = 0) +
+        scale_fill_gradient(low="white",high = "#FF2D2D")+ ggtitle(title)
+    }
+  } else if(dir=="down"){
+    if(upset==T){
+      p <- ggVennDiagram(venn_list,label_percent_digit = 1,label_alpha = 0, force_upset = T)
+    } else {
+      p <- ggVennDiagram(venn_list,label_percent_digit = 1,label_alpha = 0) +
+        scale_fill_gradient(low="white",high = "#6A6AFF")+ ggtitle(title)
+    }
+  } else {
+    if(upset==T){
+      p <- ggVennDiagram(venn_list,label_percent_digit = 1,label_alpha = 0, force_upset = T)
+    } else {
+      p <- ggVennDiagram(venn_list,label_percent_digit = 1,label_alpha = 0) +
+        scale_fill_gradient(low="white",high = "orange")+ ggtitle(title)
+    }
+  }
+  print(p)
+  # get venn list
+  venn_result <- process_region_data(Venn(venn_list))
+  return(venn_result)
+}
