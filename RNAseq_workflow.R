@@ -35,7 +35,7 @@ gene_df <- "/Users/benson/Documents/project/RNA-seq1-3/data/anno_gene.RDS" %>%
 # load log raw reads counts(logCPM)
 mylogCPM <- "/Users/benson/Documents/project/RNA-seq1-3/data/nor_logcounts.RDS" %>% 
   readRDS() %>% as.data.frame() %>% dplyr::select(name_df$group_name) %>% 
-  setNames(name_df$abbreviate)
+  setNames(name_df$abbreviate) 
 # load raw reads counts(CPM)
 mycount_df <- "/Users/benson/Documents/project/RNA-seq1-3/data/nor_counts.RDS" %>% 
   readRDS() %>% as.data.frame()
@@ -88,14 +88,30 @@ distance_matrix <- as.matrix(euclidean_dist)
 # euclidean distance heatmap
 ComplexHeatmap::Heatmap(distance_matrix, name = "euclidean_dist")
 
-### Create a DGEList object
-DEG_obj <- edgeR::DGEList(abbr_count) 
-abbr_sampleinfo <- data.frame(row = names(abbr_count),
-                              sample = names(abbr_count), 
-                              treatment = str_sub(names(abbr_count), start=3),
-                              cell = str_sub(names(abbr_count), start=1,end=1)) %>%
+### preparing sample annotation
+abbr_sampleinfo <- data.frame(row = names(mylogCPM),
+                              sample = names(mylogCPM), 
+                              treatment = str_sub(names(mylogCPM), start=3),
+                              cell = str_sub(names(mylogCPM), start=1,end=1)) %>%
   column_to_rownames('row') 
 head(abbr_sampleinfo)
+# calculate variance
+var_genes <- apply(mylogCPM, 1, var)
+head(var_genes)
+# Get the gene names for the top 500 most variable genes
+select_var <- names(sort(var_genes, decreasing=TRUE))[1:500]
+head(select_var)
+# Subset logcounts matrix
+highly_variable_lcpm <- mylogCPM[select_var,] %>% as.matrix()
+dim(highly_variable_lcpm)
+head(highly_variable_lcpm)
+# plot heatmap of 500 high variable genes
+draw_from_list(rownames(highly_variable_lcpm),groups = "ALL",id = "ENSEMBL",
+               show_row_names = F, title = "Top 500 most variable genes across samples",
+               col_cluster = T, row_km = 5)
+
+### Create a DGEList object
+DEG_obj <- edgeR::DGEList(abbr_count) 
 # set factor
 abbr_sampleinfo$sample <- factor(abbr_sampleinfo$sample)
 abbr_sampleinfo$treatment <- factor(abbr_sampleinfo$treatment)
