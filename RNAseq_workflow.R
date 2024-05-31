@@ -36,6 +36,13 @@ gene_df <- "/Users/benson/Documents/project/RNA-seq1-3/data/anno_gene.RDS" %>%
 mylogCPM <- "/Users/benson/Documents/project/RNA-seq1-3/data/nor_logcounts.RDS" %>% 
   readRDS() %>% as.data.frame() %>% dplyr::select(name_df$group_name) %>% 
   setNames(name_df$abbreviate) 
+mylogCPM_SYMBOL <- "/Users/benson/Documents/project/RNA-seq1-3/data/nor_logcounts.RDS" %>% 
+  readRDS() %>% as.data.frame() %>% dplyr::select(name_df$group_name) %>% 
+  setNames(name_df$abbreviate) %>% rownames_to_column("ENSEMBL") %>% 
+  left_join(gene_df,"ENSEMBL") %>% 
+  group_by(SYMBOL) %>%
+  summarize(across(where(is.numeric), sum)) %>% na.omit() %>% 
+  column_to_rownames(., var = "SYMBOL")
 # load raw reads counts(CPM)
 mycount_df <- "/Users/benson/Documents/project/RNA-seq1-3/data/nor_counts.RDS" %>% 
   readRDS() %>% as.data.frame()
@@ -55,8 +62,8 @@ muta_rate <- "/Users/benson/Documents/project/RNA-seq1-3/data/muta_rate.RDS" %>%
 
 ### 2.plot function --------------------------------------------------------------
 ### heatmap for single gene list
-gene_list <- c("MT1F","MT1G","ANKRD1","ANGPT2")
-draw_from_list(gene_list, groups = "CD")
+gene_list <- c("ROX1","YAP1","LATS1","LATS2","TEAD")
+draw_from_list(gene_list, groups = "CO")
 draw_from_list(gene_list, groups = "CD", col_cluster = T, row_cluster = T)
 # heatmap for lists
 list1 <- c("EGFR","ALK","ROS1","BRAF","MET","RET","Her2","KRAS","TP53","PTEN",
@@ -73,7 +80,7 @@ p1 %v% p2
 
 ### bar plot 
 # bar plot of gene expression(CPM)
-draw_bar("GADD45A", group = "ALL")
+draw_bar("LATS2", group = "ALL")
 
 ### MD plot
 # log fold changes(differences, D) versus average log values(means, M)
@@ -83,7 +90,7 @@ plot_MD("ip_Y_V_S_HCD_BAP_0_deg.xlsx")
 
 ### 3.euclidean distance, MDS and 3D PCA ----------------------------
 ### euclidean distance(use logCPM)
-euclidean_dist <- dist(t(mylogCPM), method = "euclidean")
+euclidean_dist <- dist(t(mylogCPM_SYMBOL), method = "euclidean")
 distance_matrix <- as.matrix(euclidean_dist) 
 # euclidean distance heatmap
 ComplexHeatmap::Heatmap(distance_matrix, name = "euclidean_dist")
@@ -106,7 +113,7 @@ highly_variable_lcpm <- mylogCPM[select_var,] %>% as.matrix()
 dim(highly_variable_lcpm)
 head(highly_variable_lcpm)
 # plot heatmap of 500 high variable genes
-draw_from_list(rownames(highly_variable_lcpm),groups = "ALL",id = "ENSEMBL",
+draw_from_list(rownames(highly_variable_lcpm),groups = "AS",id = "ENSEMBL",
                show_row_names = F, title = "Top 500 most variable genes across samples",
                col_cluster = T, row_km = 5)
 
@@ -258,6 +265,21 @@ enrich_de <- table(unlist(DEG)) %>% sort(decreasing = T)
 head(enrich_de,30)
 # bar plot
 draw_bar(names(enrich_de)[4],group = "ALL")
+
+### get all DEG list
+all_deg_list <- c()
+for(i in name_df$file_name[num]){
+  # 讀取 Excel 文件
+  data <- readxl::read_xlsx(file.path(data_path, i))
+  # 过滤 M 列大于 1 的行
+  deg <- data %>% filter(abs(M) > 1) %>% 
+    filter(geneBiotype=="protein_coding") %>%  
+    group_by(SYMBOL) %>%
+    summarize(across(where(is.numeric), sum)) %>%
+    arrange(desc((M))) %>% head(top) %>% pull(SYMBOL)
+  all_deg_list <- c(all_deg_list,deg)
+}
+length(all_deg_list)
 
 ### 5.venn diagram ----------------------------------------------------------
 # plot 4 clone venn diagram
@@ -547,7 +569,7 @@ head(deg)
 target_gene <- "ANKRD1"
 de_spp_TF <- intersect(spp_TF, deg)
 draw_from_list(de_spp_TF,groups = "CD", title = paste("TFs of",target_gene))
-plot_MD(name_df$file_name[8], list = tfs,only_DE = F,title = paste("TFs of",target_gene))
+plot_MD(name_df$file_name[8], list = tfs,only_DE = F,title = paste("TFs of",target_gene),plot_type = 2)
 
 ### load CollecTRI network TFs
 de_TF <- intersect(net_TF$source, deg)
@@ -555,9 +577,9 @@ length(de_TF)
 draw_from_list(de_all_TF,groups = "CD")
 # all TFs on CollecTRI network
 net_TF_list_all <- net_TF %>% distinct(source) %>% unlist()
-draw_from_list(net_TF_list_all,groups = "ALL",show_row_names = F,col_cluster = T)
+draw_from_list(net_TF_list_all,groups = "ALL",show_row_names = F,col_cluster = T,row_km = 4)
 
-### TCGA regulons -----------------------------------------------------------
+### 14.TCGA regulons -----------------------------------------------------------
 # ### get mutation rate in TCGA-LUAD patients 
 # mutation_TCGA <- maf_object@data %>% dplyr::select(Hugo_Symbol, Tumor_Sample_Barcode) %>% 
 #   mutate("patient" = str_sub(.$Tumor_Sample_Barcode,0,12))
@@ -607,3 +629,19 @@ ggplot(target_tfs_regulon[1:10,], aes(x = ID, y = `mutation_ratio(%)`)) +
   theme_minimal() +
   labs(title = paste("regulons of",tf), x = "gene Symbol", y = "Count")
 
+
+
+# get gene list -----------------------------------------------------------
+# 獲取所有hsa（人類）的pathway信息
+pathways_list <- KEGGREST::keggList("pathway", "hsa")
+kegg_id_df <- data.frame(number=c(1:length(pathways_list)),
+                         hsa = names(pathways_list), 
+                         pathway = pathways_list)
+pathway_id <- kegg_id_df$hsa[90]
+kegg_list <- get_kegg_list(pathway_id)
+pathway_name <- get_kegg_list(pathway_id, return_list = F)
+list <- intersect(kegg_list, all_deg_list)
+# heatmap
+draw_from_list(list, groups = "ALL",title = pathway_name)
+# MD plot
+plot_MD(name_df$file_name[8], title = pathway_name, list = list, plot_type = 2)
