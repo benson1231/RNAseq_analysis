@@ -455,7 +455,7 @@ rtni <- tni.dpi.filter(rtni)
 tni.regulon.summary(rtni)
 tni.regulon.summary(rtni, regulatoryElements = "JUN")
 regulons <- tni.get(rtni, what = "regulons.and.mode", idkey = "SYMBOL")
-head(regulons$FOS)
+head(regulons$JUN)
 
 ### TNA object and GSEA
 FC_list <- get_list(name_df$file_name[13],type = "ENSEMBL")
@@ -488,7 +488,7 @@ head(gsea2$differential)
 # Plot GSEA-2T results
 tna.plot.gsea2(rtna, labPheno="log2 fold changes", tfs="FOS",filepath = "./output")
 
-### regulon heatmap 
+### regulon activity heatmap 
 # Compute regulon activity for individual samples
 rtni1st <- tni.gsea2(rtni, regulatoryElements = tfs)
 metabric_regact <- tni.get(rtni1st, what = "regulonActivity")
@@ -517,74 +517,77 @@ pheatmap(t(metabric_regact$dif),
          clustering_distance_cols = "correlation")
 
 ### 13.SPP ---------------------------------------------------------------------
-### download data from SPP
+### download data from SPP website
+# http://www.signalingpathways.org/ominer/query.jsf
 spp_TF <- readxl::read_excel("/Users/benson/Downloads/SRX_results_file.xlsx") %>% 
   tidyr::separate_rows(`IPAGS|BSM|Other AGS`, sep = "\\|") %>% 
   dplyr::distinct(`IPAGS|BSM|Other AGS`) %>%
   pull(`IPAGS|BSM|Other AGS`)
 head(spp_TF)
+# get DEG from excel
 deg <- get_deg(name_df$file_name[8],dir = "all",log_crit = 1)
 head(deg)
-# select SPP TFs in DEG
+# select SPP TFs in DEG(intersect)
+target_gene <- "ANKRD1"
 de_spp_TF <- intersect(spp_TF, deg)
-draw_from_list(de_spp_TF,groups = "CD")
-plot_MD(name_df$file_name[8], list = tfs,only_DE = F)
+draw_from_list(de_spp_TF,groups = "CD", title = paste("TFs of",target_gene))
+plot_MD(name_df$file_name[8], list = tfs,only_DE = F,title = paste("TFs of",target_gene))
 
 ### load CollecTRI network TFs
-de_all_TF <- intersect(net_TF$source, deg)
-length(de_all_TF)
+de_TF <- intersect(net_TF$source, deg)
+length(de_TF)
 draw_from_list(de_all_TF,groups = "CD")
+# all TFs on CollecTRI network
 net_TF_list_all <- net_TF %>% distinct(source) %>% unlist()
 draw_from_list(net_TF_list_all,groups = "ALL",show_row_names = F,col_cluster = T)
 
 ### TCGA regulons -----------------------------------------------------------
-mutation_TCGA <- maf_object@data %>% dplyr::select(Hugo_Symbol, Tumor_Sample_Barcode) %>% 
-  mutate("patient" = str_sub(.$Tumor_Sample_Barcode,0,12))
-head(mutation_TCGA)
-# get number of patients 
-patient_num <- mutation_TCGA %>%
-  dplyr::distinct(patient) %>% 
-  pull(patient) %>% 
-  length()
-# count mutation rate in different patients
-muta_rate <- mutation_TCGA %>% 
-  distinct(patient,Hugo_Symbol) %>% 
-  group_by(Hugo_Symbol) %>% 
-  summarise(count = n()) %>% 
-  arrange(desc(count)) %>% 
-  mutate(mutation_ratio=count/patient_num) %>% 
-  setNames(c("ID","count","mutation_ratio"))
-muta_rate$ID <- factor(muta_rate$ID, levels = muta_rate$ID)
-head(muta_rate)
-# saveRDS(muta_rate,"muta_rate.RDS")
+# ### get mutation rate in TCGA-LUAD patients 
+# mutation_TCGA <- maf_object@data %>% dplyr::select(Hugo_Symbol, Tumor_Sample_Barcode) %>% 
+#   mutate("patient" = str_sub(.$Tumor_Sample_Barcode,0,12))
+# head(mutation_TCGA)
+# # get number of patients 
+# patient_num <- mutation_TCGA %>%
+#   dplyr::distinct(patient) %>% 
+#   pull(patient) %>% 
+#   length()
+# # count mutation rate in different patients
+# muta_rate <- mutation_TCGA %>% 
+#   distinct(patient,Hugo_Symbol) %>% 
+#   group_by(Hugo_Symbol) %>% 
+#   summarise(count = n()) %>% 
+#   arrange(desc(count)) %>% 
+#   mutate(mutation_ratio=count/patient_num) %>% 
+#   setNames(c("ID","count","mutation_ratio"))
+# muta_rate$ID <- factor(muta_rate$ID, levels = muta_rate$ID)
+# head(muta_rate)
+# # saveRDS(muta_rate,"muta_rate.RDS")
+
+### load mutation rate table
 muta_rate <- "/Users/benson/Documents/project/RNA-seq1-3/data/muta_rate.RDS" %>% 
   readRDS()
-# filter genes we interesting 
-# all of TFs
-all_tf <- muta_rate %>% filter(ID %in% net_TF$source)
-# TFs in our study
-tf <- "JUN"
-tf_df <- plot_TF(name_df$file_name[13], tf, title = abb(file_name),plot_type = 1)
-# ggsave("TF.jpeg")
+### filter genes we interesting 
+# get TFs' regulons
+tf <- "JUN"   # TFs in our study
+plot_TF(name_df$file_name[13], tf, title = abb(file_name), plot_type = 1)
+tf_regu_list1 <- tf_regu_df %>% arrange(desc(abs(logFC))) %>% pull(ID)
 # top50 heatmap
-regulons_list <- tf_df %>% arrange(desc(abs(logFC))) %>% head(100) %>% pull(ID)
-draw_from_list(list = regulons_list, groups = "CD",
+draw_from_list(list = tf_regu_list1[1:50], groups = "CD",
                id = "SYMBOL",label_num = F,anno = T,title = "")
-regulons <- muta_rate %>% filter(ID %in% regulons_list)
 
+### get total TF's regulons
+total_regulons <- net_TF %>% filter(source == tf) %>% pull(target)
+length(total_regulons)
+# get specific TF regulons' mutation rate
+target_tfs_regulon <- muta_rate %>% filter(ID %in% total_regulons)
 # 绘制 mutation_ratio 的柱状图
-ggplot(regulons[1:10,], aes(x = ID, y = `mutation_ratio(%)`)) +
+ggplot(target_tfs_regulon[1:10,], aes(x = ID, y = `mutation_ratio(%)`)) +
   geom_bar(stat = "identity", fill = "salmon") +
   theme_minimal() +
-  labs(title = paste("regulons of",tf), x = "Hugo Symbol", y = "Mutation Ratio")
+  labs(title = paste("regulons of",tf), x = "Gene Symbol", y = "Mutation Rate (%)")
 # 绘制 count 的柱状图
-ggplot(regulons[1:10,], aes(x = ID, y = `mutation_ratio(%)`)) +
+ggplot(target_tfs_regulon[1:10,], aes(x = ID, y = `mutation_ratio(%)`)) +
   geom_bar(stat = "identity", fill = "skyblue") +
   theme_minimal() +
-  labs(title = paste("regulons of",tf), x = "Hugo Symbol", y = "Count")
-
-# plot logFC_TCGA mutation plot
-tf_df <- plot_TF(file_name, "JUN")
-regulons_list <- tf_df %>% arrange(desc(abs(logFC))) %>% pull(ID)
-length(regulons_list)
+  labs(title = paste("regulons of",tf), x = "gene Symbol", y = "Count")
 
