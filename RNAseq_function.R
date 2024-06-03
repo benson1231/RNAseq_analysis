@@ -10,7 +10,7 @@ only_LCD <- c(9,7,12, 22,20,25, 35,33,38, 48,46,51)
 HCD <- c(1,2,9,8,13, 14,15,22,21,26, 27,28,35,34,39, 40,41,48,47,52)
 only_HCD <- c(9,8,13, 22,21,26, 35,34,39, 48,47,52)
 CD <- c(1,2,9,7,8,12,13, 14,15,22,20,21,25,26, 27,28,35,33,34,38,39, 40,41,48,46,47,51,52)
-only_CD <- c(9,7,8,12,13, 22,20,21,25,26, 35,33,3438,39, 48,46,47,51,52)
+only_CD <- c(9,7,8,12,13, 22,20,21,25,26, 35,33,34,38,39, 48,46,47,51,52)
 BAP <- c(1,2,9,10,11,12,13, 14,15,22,23,24,25,26, 27,28,35,36,37,38,39, 40,41,48,49,50,51,52)
 # abb ---------------------------------------------------------------------
 abb <- function(name,type="group"){
@@ -46,7 +46,7 @@ force_list <- function(x){
 # }
 
 # draw_heatmap ------------------------------------------------------------
-draw_heatmap <- function(file=file,
+draw_heatmap <- function(file=NULL,
                          log_crit=3,
                          groups="ALL",
                          show_row_names = FALSE,
@@ -54,27 +54,41 @@ draw_heatmap <- function(file=file,
                          row_km=T,
                          km=0,
                          return_cluster=F,
-                         title=""
+                         title="",
+                         list=NULL
                          ){
   if(!(groups%in%c("AS","CO","LCD","HCD","CD","BAP","only_AS","only_CO",
                   "only_LCD","only_HCD","only_CD","CON","ALL"))){
     stop('"groups" must be "AS","CO","LCD","HCD","CD","BAP","only_AS","only_CO",
          "only_LCD","only_HCD","only_CD","CON" or "ALL".')
   }
-  cat(c(" -> load data from",file.path(data_path, file),"\n"))
-  data <- readxl::read_xlsx(file.path(data_path, file)) # 讀檔
-  data <- data %>% filter(abs(M)>log_crit,
-                          !(SYMBOL%in% c("havana","ensembl_havana","havana_tagene")))  
-  cat(c(" -> log2FC criteria is", log_crit,"\n"))
-  
-  list <- data$ENSEMBL  # 抓出差異ensembl id
-  gene_df <- data[,c("ENSEMBL","SYMBOL")] # 
-  mycount_df$ENSEMBL <- rownames(mycount_df)
-  new_df <- mycount_df %>% left_join(.,gene_df, by="ENSEMBL")
-  mat <- mycount_df %>% filter(.,rownames(mycount_df) %in% list) %>% 
-    left_join(.,gene_df, by="ENSEMBL") %>% group_by(SYMBOL) %>%
+
+  mat <- mycount_df %>% as.data.frame() %>% rownames_to_column("ENSEMBL") %>% 
+    left_join(.,gene_df, by="ENSEMBL") %>% 
+    group_by(SYMBOL) %>%
     summarize(across(where(is.numeric), sum)) %>% 
-    column_to_rownames(., var = "SYMBOL")
+    column_to_rownames(., var = "SYMBOL") %>% na.omit()
+  
+  if(!is.null(file)){
+    cat(c(" -> load data from",file.path(data_path, file),"\n"))
+    data <- readxl::read_xlsx(file.path(data_path, file)) # 讀檔
+    data <- data %>% filter(abs(M)>log_crit,
+                            !(SYMBOL%in% c("havana","ensembl_havana","havana_tagene")))  
+    cat(c(" -> log2FC criteria is", log_crit,"\n"))
+    deg <- data$SYMBOL 
+    mat <- mat %>% filter(rownames(.)%in% deg)  # 抓出差異ensembl id
+    if(!is.null(list)){
+      mat <- mat %>% filter(rownames(.)%in% list)
+      cat(" -> filter file DEGs in 'list'.\n")
+    } 
+  } else{
+      if(!is.null(list)){
+        mat <- mat %>% filter(rownames(.)%in% list)
+        cat(" -> filter genes in 'list'.\n")
+      } else {
+        stop(" error: both 'file' and 'list' missing.")
+      }
+  }
   
   # select groups
   if(groups == "AS"){
@@ -1357,6 +1371,8 @@ draw_cell_boxplot <- function(gene, by){
     geom_boxplot()+
     labs(title = paste0(gene," (2020 cell RNA expression)"),
          x = "Groups",
-         y = "logFC") +
-    theme_minimal()
+         y = "log2FC") +
+    theme_minimal() + geom_hline(yintercept = 0, 
+                              color = "dodgerblue", linetype = 'solid', linewidth = 0.7)
+  
 }
