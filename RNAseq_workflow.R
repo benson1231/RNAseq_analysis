@@ -80,17 +80,17 @@ p1 %v% p2
 
 ### bar plot 
 # bar plot of gene expression(CPM)
-draw_bar("LATS2", group = "ALL")
+draw_bar("RRAD", group = "ALL")
 
 ### MD plot
 # log fold changes(differences, D) versus average log values(means, M)
-plot_MD("ip_D_V_S_HCD_0_deg.xlsx", only_DE = T, plot_type = 1)
+plot_MD("ip_L_V_S_AS_BAP_0_deg.xlsx", only_DE = T, plot_type = 2)
 # with non-significant genes(it may take while)
-plot_MD("ip_Y_V_S_HCD_BAP_0_deg.xlsx")
+plot_MD("ip_L_V_S_HCD_BAP_0_deg.xlsx")
 
 ### 3.euclidean distance, MDS and 3D PCA ----------------------------
 ### euclidean distance(use logCPM)
-euclidean_dist <- dist(t(mylogCPM_SYMBOL), method = "euclidean")
+euclidean_dist <- dist(t(mylogCPM), method = "euclidean")
 distance_matrix <- as.matrix(euclidean_dist) 
 # euclidean distance heatmap
 ComplexHeatmap::Heatmap(distance_matrix, name = "euclidean_dist")
@@ -113,9 +113,9 @@ highly_variable_lcpm <- mylogCPM[select_var,] %>% as.matrix()
 dim(highly_variable_lcpm)
 head(highly_variable_lcpm)
 # plot heatmap of 500 high variable genes
-draw_from_list(rownames(highly_variable_lcpm),groups = "AS",id = "ENSEMBL",
+draw_from_list(rownames(highly_variable_lcpm),groups = "ALL",id = "ENSEMBL",
                show_row_names = F, title = "Top 500 most variable genes across samples",
-               col_cluster = T, row_km = 5)
+               col_cluster = F,filter = F,row_km = 5)
 
 ### Create a DGEList object
 DEG_obj <- edgeR::DGEList(abbr_count) 
@@ -262,9 +262,18 @@ DEG <- DEG_df[,-1]
 DEG <- readxl::read_excel("data/DEG.xlsx") %>% as.data.frame()
 # 對數據框中的每一列計數
 enrich_de <- table(unlist(DEG)) %>% sort(decreasing = T)
-head(enrich_de,30)
+head(enrich_de,50)
+
+# DEG count df
+deg_count <- data.frame(gene=enrich_de)
+deg_count$gene.Var1 <- factor(deg_count$gene.Var1, levels = deg_count$gene.Var1)
+# 绘制 count 的柱状图
+ggplot(deg_count[1:30,], aes(x = gene.Var1, y = gene.Freq)) +
+  geom_bar(stat = "identity", fill = "skyblue") +
+  theme_minimal() +
+  labs(title = "count of DEG in all groups", x = "gene Symbol", y = "Count")
 # bar plot
-draw_bar(names(enrich_de)[4],group = "ALL")
+draw_bar(names(enrich_de)[10],group = "ALL")
 
 ### get all DEG list
 all_deg_list <- c()
@@ -276,31 +285,34 @@ for(i in name_df$file_name[num]){
     filter(geneBiotype=="protein_coding") %>%  
     group_by(SYMBOL) %>%
     summarize(across(where(is.numeric), sum)) %>%
-    arrange(desc((M))) %>% head(top) %>% pull(SYMBOL)
+    arrange(desc(M)) %>% pull(SYMBOL)
   all_deg_list <- c(all_deg_list,deg)
 }
+all_deg_list <- unique(all_deg_list)
+# saveRDS(all_deg_list,"data/all_deg_list.RDS")
+all_deg_list <- file.path(wd,"data/all_deg_list.RDS") %>% readRDS
 length(all_deg_list)
 
 ### 5.venn diagram ----------------------------------------------------------
 # plot 4 clone venn diagram
-AZA_venn <- multi_venn(name_df$file_name[c(3,16,29,42)],dir = "up", title = "AZA")
-DAC_venn <- multi_venn(name_df$file_name[c(4,17,30,43)],dir = "up", title = "DAC")
-AS_venn <- multi_venn(name_df$file_name[c(5,18,31,44)],dir = "up", title = "AS")
-CO_venn <- multi_venn(name_df$file_name[c(6,19,32,45)],dir = "up", title = "CO")
-LCD_venn <- multi_venn(name_df$file_name[c(7,20,33,46)],dir = "up", title = "LCD")
-HCD_venn <- multi_venn(name_df$file_name[c(8,21,34,47)],dir = "up", title = "HCD")
-BAP_venn <- multi_venn(name_df$file_name[c(9,22,35,48)],dir = "up", title = "BAP")
-AS_BAP_venn <- multi_venn(name_df$file_name[c(10,23,36,49)],dir = "up", title = "AS_BAP")
-CO_BAP_venn <- multi_venn(name_df$file_name[c(11,24,37,50)],dir = "up", title = "CO_BAP")
-LCD_BAP_venn <- multi_venn(name_df$file_name[c(12,25,38,51)],dir = "up", title = "LCD_BAP")
-HCD_BAP_venn <- multi_venn(name_df$file_name[c(13,26,39,52)],dir = "up", title = "HCD_BAP")
+AZA_venn <- multi_venn(name_df$file_name[c(3,16,29,42)],dir = "down", title = "AZA")
+DAC_venn <- multi_venn(name_df$file_name[c(4,17,30,43)],dir = "down", title = "DAC")
+AS_venn <- multi_venn(name_df$file_name[c(5,18,31,44)],dir = "down", title = "AS")
+CO_venn <- multi_venn(name_df$file_name[c(6,19,32,45)],dir = "down", title = "CO")
+LCD_venn <- multi_venn(name_df$file_name[c(7,20,33,46)],dir = "down", title = "LCD")
+HCD_venn <- multi_venn(name_df$file_name[c(8,21,34,47)],dir = "down", title = "HCD")
+BAP_venn <- multi_venn(name_df$file_name[c(9,22,35,48)],dir = "down", title = "BAP")
+AS_BAP_venn <- multi_venn(name_df$file_name[c(10,23,36,49)],dir = "down", title = "AS_BAP")
+CO_BAP_venn <- multi_venn(name_df$file_name[c(11,24,37,50)],dir = "down", title = "CO_BAP")
+LCD_BAP_venn <- multi_venn(name_df$file_name[c(12,25,38,51)],dir = "down", title = "LCD_BAP")
+HCD_BAP_venn <- multi_venn(name_df$file_name[c(13,26,39,52)],dir = "down", title = "HCD_BAP")
 # upset plot
 HCD_BAP_venn <- multi_venn(name_df$file_name[c(13,26,39,52)],dir = "up", upset = T)
 # get venn list gene
-print(AS_venn)
-venn_list <- CO_venn$item[[15]]
+print(HCD_venn)
+venn_list <- AS_venn$item[[15]]
 draw_from_list(venn_list, groups = "AS")
-plot_MD(name_df$file_name[5], plot_type = 1)
+plot_MD(name_df$file_name[5], plot_type = 1,with_line = F)
 
 ### use divenn2.0
 get_divenn("ip_Y_V_S_CO_0_deg.xlsx",output_name = "CO.xlsx")
@@ -324,14 +336,16 @@ top <- get_deg(file_name, log_crit = c(1,-1),dir = "down",type = "SYMBOL", top =
 draw_from_list(list = top, groups = group, id = "SYMBOL")
 
 ### 7.ORA several groups with heatmap -----------------------------------------
-file_list <- c("ip_W_V_S_CO_0_deg.xlsx", "ip_D_V_S_CO_0_deg.xlsx", 
-               "ip_Y_V_S_CO_0_deg.xlsx","ip_L_V_S_CO_0_deg.xlsx")
-group_names <- c("WT", "Del19", "YAP","L858R")
+file_list <- c("ip_W_V_S_HCD_BAP_0_deg.xlsx", "ip_L_V_S_HCD_BAP_0_deg.xlsx", 
+               "ip_D_V_S_HCD_BAP_0_deg.xlsx","ip_Y_V_S_HCD_BAP_0_deg.xlsx")
+group_names <- c("WT", "L858R", "Del19","YAP")
 ### KEGG
-p1 <- plot_heatmap(file_list, group_names, analysis = "kegg", dir="up", col_title = "CO",
+title <- "HCD_BAP"
+dir <- "up"
+p1 <- plot_heatmap(file_list, group_names, analysis = "kegg", dir=dir, col_title = title,
                    row_title = "KEGG", top = 20)
 ### Reactome
-p2 <- plot_heatmap(file_list, group_names, analysis = "reactome", dir="down", 
+p2 <- plot_heatmap(file_list, group_names, analysis = "reactome", dir=dir, 
                    row_title = "Reactome", top = 20)
 p1 %v% p2
 
@@ -376,7 +390,7 @@ mutate(react_result, qscore = -log(p.adjust, base=10)) %>%
 
 ### 9.GSEA analysis -----------------------------------------------------------
 ### KEGG
-keg <- kegg_run("ip_Y_V_S_HCD_0_deg.xlsx")  # change
+keg <- kegg_run("ip_D_V_S_HCD_0_deg.xlsx")  # change
 ### dot plot
 dotplot(keg, showCategory = 10, label_format=50, 
         title = "Enriched Pathways", split=".sign") + 
@@ -435,7 +449,7 @@ net_TF <- "/Users/benson/Documents/project/RNA-seq1-3/data/net_TF.RDS" %>% readR
 ### pathway 
 run_path_heatmap(gene_count)
 # pathway for specific group
-file_name <- "ip_W_V_S_HCD_0_deg.xlsx"   # change
+file_name <- "ip_L_V_S_AS_BAP_0_deg.xlsx"   # change
 # pathway barplot
 run_pathway(file_name, title = abb(file_name))
 # pathway specific genes MD plot
@@ -449,11 +463,13 @@ plot_MD(file_name, list = path_top50, plot_type = 2)
 ### TFs 
 run_TF_heatmap(gene_count)
 # TFs for specific group
-file_name <- "ip_W_V_S_HCD_BAP_0_deg.xlsx"   # change
+file_name <- "ip_Y_V_S_HCD_BAP_0_deg.xlsx"   # change
 # TFs barplot
 run_TF(file_name, title = abb(file_name, type = "file"))
+tf_candidate <- run_TF(file_name, title = abb(file_name, type = "file"), plot = F)
 # TFs specific genes MD plot
-TF <- plot_TF(file_name, "JUN", title = abb(file_name))
+tf <- "NFKB"
+TF <- plot_TF(file_name, TF = tf, title = "regulons of")
 # ggsave("TF.jpeg")
 # top50 heatmap
 TF_top50 <- TF %>% arrange(desc(abs(logFC))) %>% head(50) %>% pull(ID)
@@ -466,24 +482,16 @@ target_gene <- "ANKRD1"
 target_gene_TF <- net_TF %>% filter(target==target_gene) %>% pull(source)
 draw_from_list(c(target_gene_TF,target_gene),groups = "CD")
 
-### 13.survival ----------------------------------------------------------------
-# load TCGA-LUAD patient data
-maf_object <- "/Users/benson/Documents/project/RNA-seq1-3/data/maf_object.RDS" %>%
-  readRDS()
-# load TCGA-LUAD patient clinical data
-clin.LUAD <- "/Users/benson/Documents/project/RNA-seq1-3/data/clin_LUAD.RDS" %>% 
-  readRDS()
-# plot survival curve
-draw_survival("JUN")
-
 ### 12.RTN for TFs GSEA ---------------------------------------------------------
 library(RTN)
 # column annotation and interesting TFs
 colAnnotation <- openxlsx::read.xlsx("/Users/benson/Documents/project/RNA-seq1-3/data/sampleinfo.xlsx",rowNames = T)
-tfs <- run_TF(file_name, title = abb(file_name),plot = F) %>% pull(source)
+tf_candidate <- run_TF(file_name, title = abb(file_name),plot = F) %>% 
+  pull(source) %>% head(6)
+print(tf_candidate)
 ### TNI object
 rtni <- RTN::tni.constructor(expData = as.matrix(abbr_count), 
-                             regulatoryElements = tfs, 
+                             regulatoryElements = tf_candidate, 
                              colAnnotation = colAnnotation, 
                              rowAnnotation = gene_df)
 
@@ -496,9 +504,9 @@ regulons <- tni.get(rtni, what = "regulons.and.mode", idkey = "SYMBOL")
 head(regulons$JUN)
 
 ### TNA object and GSEA
-FC_list <- get_list(name_df$file_name[13],type = "ENSEMBL")
+FC_list <- get_list(file_name,type = "ENSEMBL")
 head(FC_list)
-DEG_list <- get_deg(name_df$file_name[13],type = "ENSEMBL")
+DEG_list <- get_deg(file_name,type = "ENSEMBL")
 head(DEG_list)
 # create TNA object
 rtna <- tni2tna.preprocess(object = rtni, 
@@ -524,7 +532,10 @@ rtna <- tna.gsea2(rtna, nPermutations = 100)  # Please set nPermutations >= 1000
 gsea2 <- tna.get(rtna, what = "gsea2", ntop = -1)
 head(gsea2$differential)
 # Plot GSEA-2T results
-tna.plot.gsea2(rtna, labPheno="log2 fold changes", tfs="FOS",filepath = "./output")
+tna.plot.gsea2(rtna, labPheno="log2 fold changes", tfs="TP53",filepath = "./output")
+for (i in tf_candidate) {
+  tna.plot.gsea2(rtna, labPheno="log2 fold changes", tfs=i,filepath = "./output")
+}
 
 ### regulon activity heatmap 
 # Compute regulon activity for individual samples
@@ -563,13 +574,26 @@ spp_TF <- readxl::read_excel("/Users/benson/Downloads/SRX_results_file.xlsx") %>
   pull(`IPAGS|BSM|Other AGS`)
 head(spp_TF)
 # get DEG from excel
-deg <- get_deg(name_df$file_name[8],dir = "all",log_crit = 1)
+deg <- get_deg(name_df$file_name[10],dir = "all",log_crit = 1)
 head(deg)
 # select SPP TFs in DEG(intersect)
-target_gene <- "ANKRD1"
+target_gene <- "SERPINE1"
 de_spp_TF <- intersect(spp_TF, deg)
-draw_from_list(de_spp_TF,groups = "CD", title = paste("TFs of",target_gene))
+list <- c(target_gene, de_spp_TF)
+list <- factor(list,levels = list)
+draw_from_list(list,groups = "CD", title = paste("TFs of",target_gene),row_cluster = FALSE)
 plot_MD(name_df$file_name[8], list = tfs,only_DE = F,title = paste("TFs of",target_gene),plot_type = 2)
+
+### CollecTRI TF
+target_gene <- "AREG"
+target_gene_tf <- net_TF %>% filter(target==target_gene)
+deg <- get_deg(file_name)
+target_gene_de_tf  <- intersect(net_TF$source, deg)
+draw_from_list(target_gene_de_tf,"CO")
+plot_TF(file_name,"JUN",plot = T)
+plot_TF(file_name,"TP53",plot = T,plot_type = 2)
+plot_TF(file_name,"FOS",plot = T)
+plot_MD(file_name,list="TP53",only_DE = F,plot_type = 2)
 
 ### load CollecTRI network TFs
 de_TF <- intersect(net_TF$source, deg)
@@ -579,7 +603,29 @@ draw_from_list(de_all_TF,groups = "CD")
 net_TF_list_all <- net_TF %>% distinct(source) %>% unlist()
 draw_from_list(net_TF_list_all,groups = "ALL",show_row_names = F,col_cluster = T,row_km = 4)
 
-### 14.TCGA regulons -----------------------------------------------------------
+### 14.get KEGG gene list in DEG ----------------------------------------------
+# 獲取所有hsa（人類）的pathway信息
+pathways_list <- KEGGREST::keggList("pathway", "hsa")
+kegg_id_df <- data.frame(num=c(1:length(pathways_list)),
+                         hsa = names(pathways_list), 
+                         pathway = pathways_list)
+# get specific pathway for our study
+pathway_df <- kegg_id_df[c(90,91,92,108:114,133,164,170,268,270,291),]
+pathway_id <- pathway_df$hsa[2]
+
+# get KEGG gene list
+kegg_list <- get_kegg_list(pathway_id)
+pathway_name <- get_kegg_list(pathway_id, return_list = F)
+list <- intersect(kegg_list, all_deg_list)
+# heatmap
+draw_from_list(list, groups = "ALL",title = pathway_name)
+# MD plot
+plot_MD(name_df$file_name[8], title = pathway_name, list = list, plot_type = 2)
+# bar plot of gene expression
+draw_bar("GSTM4")
+
+
+### 15.TCGA regulons -----------------------------------------------------------
 # ### get mutation rate in TCGA-LUAD patients 
 # mutation_TCGA <- maf_object@data %>% dplyr::select(Hugo_Symbol, Tumor_Sample_Barcode) %>% 
 #   mutate("patient" = str_sub(.$Tumor_Sample_Barcode,0,12))
@@ -630,18 +676,47 @@ ggplot(target_tfs_regulon[1:10,], aes(x = ID, y = `mutation_ratio(%)`)) +
   labs(title = paste("regulons of",tf), x = "gene Symbol", y = "Count")
 
 
+### 16.TCGA-LUAD RNA-seq and survival ---------------------------------------
+### RNA-seq data 
+# load TCGA-LUAD RNA-seq count
+tcga_count <- "/Users/benson/Documents/project/RNA-seq1-3/data/tcga_count.RDS" %>% 
+  readRDS()
+# load TCGA-LUAD patient clinical data
+clin.LUAD <- "/Users/benson/Documents/project/RNA-seq1-3/data/clin_LUAD.RDS" %>% 
+  readRDS()
+# 抓出亞洲女性與非亞洲女性id
+asian_id <- clin.LUAD %>% 
+  as.data.frame()%>% 
+  filter(race=="asian" & gender=="female")%>% 
+  pull(submitter_id)
+non_asian_id <- clin.LUAD %>% 
+  as.data.frame()%>% 
+  filter(race!="asian" & gender=="female") %>% 
+  pull(submitter_id)
+### draw box plot
+draw_TCGA_boxplot("ITK")
 
-# get gene list -----------------------------------------------------------
-# 獲取所有hsa（人類）的pathway信息
-pathways_list <- KEGGREST::keggList("pathway", "hsa")
-kegg_id_df <- data.frame(number=c(1:length(pathways_list)),
-                         hsa = names(pathways_list), 
-                         pathway = pathways_list)
-pathway_id <- kegg_id_df$hsa[90]
-kegg_list <- get_kegg_list(pathway_id)
-pathway_name <- get_kegg_list(pathway_id, return_list = F)
-list <- intersect(kegg_list, all_deg_list)
-# heatmap
-draw_from_list(list, groups = "ALL",title = pathway_name)
-# MD plot
-plot_MD(name_df$file_name[8], title = pathway_name, list = list, plot_type = 2)
+### survival
+# load TCGA-LUAD patient data
+maf_object <- "/Users/benson/Documents/project/RNA-seq1-3/data/maf_object.RDS" %>%
+  readRDS()
+# load TCGA-LUAD patient clinical data
+clin.LUAD <- "/Users/benson/Documents/project/RNA-seq1-3/data/clin_LUAD.RDS" %>% 
+  readRDS()
+# plot survival curve(in 'output' file)
+draw_survival("ANKRD1")
+
+### 17.2020 cellpress -------------------------------------------------------
+cell_info <- readxl::read_excel("/Users/benson/Documents/project/RNA-seq1-3/data/2020cell_info.xlsx")
+cell_count <- readxl::read_excel("/Users/benson/Documents/project/RNA-seq1-3/data/2020cell.xlsx") %>% 
+  as.data.frame() %>% group_by(gene) %>% summarize(across(where(is.numeric), sum)) %>% 
+  column_to_rownames("gene")
+cell_count$Median <- NULL
+
+# draw boxplot by 'Gender','Smoking Status','Stage' or 'EGFR_Status'
+gene <- "SERPINE1"
+draw_cell_boxplot(gene, by="Gender")
+draw_cell_boxplot(gene, by="Smoking Status")
+draw_cell_boxplot(gene, by="Stage")
+draw_cell_boxplot(gene, by="EGFR_Status")
+
