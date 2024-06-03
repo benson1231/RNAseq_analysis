@@ -1336,7 +1336,7 @@ draw_TCGA_boxplot <- function(gene){
   # 绘制基因表达量的箱线图
   p <- ggplot(mat, aes(x = group, y = log(count))) +
     geom_boxplot()+
-    labs(title = paste0(gene," (TCGA RNA-seq)"),
+    labs(title = paste0(gene," (TCGA RNA expression)"),
          x = "Groups",
          y = "Expression Level (log(count))") +
     theme_minimal()
@@ -1344,6 +1344,19 @@ draw_TCGA_boxplot <- function(gene){
   p + geom_text(aes(x = 1.25, y = 7, 
                     label = paste("p-value:", format(t_test_result$p.value, digits = 3))),
                 hjust = 0, vjust = 0, color = "black")
-  
 }
 
+# draw_cell_boxplot --------------------------------------------------------
+draw_cell_boxplot <- function(gene, by){
+  df <- cell_count %>% filter(rownames(.)==gene) %>% t() %>%  as.data.frame() %>% 
+    setNames("count") %>% rownames_to_column("ID") %>% left_join(cell_info,"ID")
+  if(!(by %in% c("Gender","Smoking Status","Stage","EGFR_Status"))){
+    stop("error: 'by' must be 'Gender','Smoking Status','Stage','EGFR_Status'")
+  }
+  ggplot(df, aes(x = !!sym(by), y = count)) +
+    geom_boxplot()+
+    labs(title = paste0(gene," (2020 cell RNA expression)"),
+         x = "Groups",
+         y = "logFC") +
+    theme_minimal()
+}
