@@ -295,17 +295,17 @@ length(all_deg_list)
 
 ### 5.venn diagram ----------------------------------------------------------
 # plot 4 clone venn diagram
-AZA_venn <- multi_venn(name_df$file_name[c(3,16,29,42)],dir = "down", title = "AZA")
-DAC_venn <- multi_venn(name_df$file_name[c(4,17,30,43)],dir = "down", title = "DAC")
-AS_venn <- multi_venn(name_df$file_name[c(5,18,31,44)],dir = "down", title = "AS")
-CO_venn <- multi_venn(name_df$file_name[c(6,19,32,45)],dir = "down", title = "CO")
-LCD_venn <- multi_venn(name_df$file_name[c(7,20,33,46)],dir = "down", title = "LCD")
-HCD_venn <- multi_venn(name_df$file_name[c(8,21,34,47)],dir = "down", title = "HCD")
-BAP_venn <- multi_venn(name_df$file_name[c(9,22,35,48)],dir = "down", title = "BAP")
-AS_BAP_venn <- multi_venn(name_df$file_name[c(10,23,36,49)],dir = "down", title = "AS_BAP")
-CO_BAP_venn <- multi_venn(name_df$file_name[c(11,24,37,50)],dir = "down", title = "CO_BAP")
-LCD_BAP_venn <- multi_venn(name_df$file_name[c(12,25,38,51)],dir = "down", title = "LCD_BAP")
-HCD_BAP_venn <- multi_venn(name_df$file_name[c(13,26,39,52)],dir = "down", title = "HCD_BAP")
+AZA_venn <- multi_venn(name_df$file_name[c(3,16,29,42)],dir = "up", title = "AZA")
+DAC_venn <- multi_venn(name_df$file_name[c(4,17,30,43)],dir = "up", title = "DAC")
+AS_venn <- multi_venn(name_df$file_name[c(5,18,31,44)],dir = "up", title = "AS")
+CO_venn <- multi_venn(name_df$file_name[c(6,19,32,45)],dir = "up", title = "CO")
+LCD_venn <- multi_venn(name_df$file_name[c(7,20,33,46)],dir = "up", title = "LCD")
+HCD_venn <- multi_venn(name_df$file_name[c(8,21,34,47)],dir = "up", title = "HCD")
+BAP_venn <- multi_venn(name_df$file_name[c(9,22,35,48)],dir = "up", title = "BAP")
+AS_BAP_venn <- multi_venn(name_df$file_name[c(10,23,36,49)],dir = "up", title = "AS_BAP")
+CO_BAP_venn <- multi_venn(name_df$file_name[c(11,24,37,50)],dir = "up", title = "CO_BAP")
+LCD_BAP_venn <- multi_venn(name_df$file_name[c(12,25,38,51)],dir = "up", title = "LCD_BAP")
+HCD_BAP_venn <- multi_venn(name_df$file_name[c(13,26,39,52)],dir = "up", title = "HCD_BAP")
 # upset plot
 HCD_BAP_venn <- multi_venn(name_df$file_name[c(13,26,39,52)],dir = "up", upset = T)
 # get venn list gene
@@ -314,10 +314,10 @@ venn_list <- AS_venn$item[[15]]
 draw_from_list(venn_list, groups = "AS")
 plot_MD(name_df$file_name[5], plot_type = 1,with_line = F)
 
-### use divenn2.0
-get_divenn("ip_Y_V_S_CO_0_deg.xlsx",output_name = "CO.xlsx")
-get_divenn("ip_Y_V_S_CO_BAP_0_deg.xlsx",output_name = "CO_BAP.xlsx")
-# https://divenn.tch.harvard.edu/v2/
+# ### use divenn2.0
+# get_divenn("ip_Y_V_S_CO_0_deg.xlsx",output_name = "CO.xlsx")
+# get_divenn("ip_Y_V_S_CO_BAP_0_deg.xlsx",output_name = "CO_BAP.xlsx")
+# # https://divenn.tch.harvard.edu/v2/
 
 ### 6.get DEG list ------------------------------------------------------------
 file_name <- name_df$file_name[6]  # change
@@ -351,7 +351,7 @@ p1 %v% p2
 
 ### 8.ORA pathway in single group ----------------------------------------------
 ### enrichKEGG(KEGG pathway)
-keg_result <- run_keg_path(name_df$file_name[6], dir = "up",log_crit = 1)
+keg_result <- run_keg_path(name_df$file_name[10], dir = "up",log_crit = 1)
 view(keg_result %>% as.data.frame() %>% rownames_to_column("new_ID"))
 # bar plot
 barplot(keg_result, showCategory=10, font.size = 9, x = "GeneRatio", label_format = 40,
@@ -415,12 +415,22 @@ list <- force_list(keg_gene@result$core_enrichment[15])
 draw_from_list(list =list , groups = "ALL", id = "SYMBOL")
 
 ### 10.cluster analysis ------------------------------------------------------
-file_name <- "ip_Y_V_S_CO_BAP_0_deg.xlsx"
-group <- "only_CO"
+file_name <- "ip_Y_V_S_HCD_BAP_0_deg.xlsx"
+group <- "only_CD"
 k_value <- 5
-draw_heatmap(file_name, groups = group, log_crit = 1, km = k_value)
+draw_heatmap(groups = group, log_crit = 1, km = k_value,list = list)
 # run cluster analysis
-cluster_result <- draw_heatmap(file_name, groups = group, log_crit = 1, 
+cluster_result <- draw_heatmap(file_name,groups = group, log_crit = 1, 
+                               row_km = T, km=k_value, return_cluster = T)
+
+# draw heatmap from 4 clone DEGs
+list1 <- get_deg(name_df$file_name[13])
+list2 <- get_deg(name_df$file_name[26])
+list3 <- get_deg(name_df$file_name[39])
+list4 <- get_deg(name_df$file_name[52])
+list <- c(list1,list2,list3,list4) %>% unique()
+length(list)
+cluster_result <- draw_heatmap(groups = group, log_crit = 1, list = list,
                                row_km = T, km=k_value, return_cluster = T)
 # get cluster gene SYMBOL
 cluster1 <- names(cluster_result [cluster_result == 1])
@@ -577,7 +587,7 @@ head(spp_TF)
 deg <- get_deg(name_df$file_name[10],dir = "all",log_crit = 1)
 head(deg)
 # select SPP TFs in DEG(intersect)
-target_gene <- "SERPINE1"
+target_gene <- "ANKRD1"
 de_spp_TF <- intersect(spp_TF, deg)
 list <- c(target_gene, de_spp_TF)
 list <- factor(list,levels = list)
@@ -622,7 +632,7 @@ draw_from_list(list, groups = "ALL",title = pathway_name)
 # MD plot
 plot_MD(name_df$file_name[8], title = pathway_name, list = list, plot_type = 2)
 # bar plot of gene expression
-draw_bar("GSTM4")
+draw_bar("GSTM5")
 
 
 ### 15.TCGA regulons -----------------------------------------------------------
@@ -694,7 +704,7 @@ non_asian_id <- clin.LUAD %>%
   filter(race!="asian" & gender=="female") %>% 
   pull(submitter_id)
 ### draw box plot
-draw_TCGA_boxplot("ITK")
+draw_TCGA_boxplot("KRT15")
 
 ### survival
 # load TCGA-LUAD patient data
@@ -714,7 +724,7 @@ cell_count <- readxl::read_excel("/Users/benson/Documents/project/RNA-seq1-3/dat
 cell_count$Median <- NULL
 
 # draw boxplot by 'Gender','Smoking Status','Stage' or 'EGFR_Status'
-gene <- "SERPINE1"
+gene <- "KRT15"
 draw_cell_boxplot(gene, by="Gender")
 draw_cell_boxplot(gene, by="Smoking Status")
 draw_cell_boxplot(gene, by="Stage")
