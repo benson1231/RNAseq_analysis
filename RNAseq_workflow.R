@@ -730,3 +730,12 @@ draw_cell_boxplot(gene, by="Smoking Status")
 draw_cell_boxplot(gene, by="Stage")
 draw_cell_boxplot(gene, by="EGFR_Status")
 
+# signature
+draw_cell_boxplot(sig_num = 26)
+
+### 18.Spearman's correlation for signature ----------------------------------
+### Spearman's correlation
+draw_Spearman_bar(18,"AS")
+
+### signature
+draw_violin(sig_num = 8,"CD")
