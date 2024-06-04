@@ -1361,18 +1361,144 @@ draw_TCGA_boxplot <- function(gene){
 }
 
 # draw_cell_boxplot --------------------------------------------------------
-draw_cell_boxplot <- function(gene, by){
-  df <- cell_count %>% filter(rownames(.)==gene) %>% t() %>%  as.data.frame() %>% 
-    setNames("count") %>% rownames_to_column("ID") %>% left_join(cell_info,"ID")
-  if(!(by %in% c("Gender","Smoking Status","Stage","EGFR_Status"))){
-    stop("error: 'by' must be 'Gender','Smoking Status','Stage','EGFR_Status'")
+draw_cell_boxplot <- function(gene=NULL, by=NULL, sig_num=NULL){
+  if(is.null(sig_num)){
+    if(!(by %in% c("Gender","Smoking Status","Stage","EGFR_Status"))){
+      stop("error: 'by' must be 'Gender','Smoking Status','Stage','EGFR_Status'")
+    }
+    df <- cell_count %>% filter(rownames(.)==gene) %>% t() %>%  as.data.frame() %>% 
+      setNames("count") %>% rownames_to_column("ID") %>% left_join(cell_info,"ID")
+    ggplot(df, aes(x = !!sym(by), y = count)) +
+      geom_boxplot()+
+      labs(title = paste0(gene," ( RNA expression in Chen, Yi-Ju et al.)"),
+           x = "Groups",
+           y = "log2FC") +
+      theme_minimal() + geom_hline(yintercept = 0, 
+                                   color = "dodgerblue", linetype = 'solid', linewidth = 0.7)
+  } else{
+    sig <- get_deg(name_df$file_name[sig_num], type = "SYMBOL",dir = "up",top = 100)
+    cat(c(" -> get",name_df$abbreviate[sig_num], "signature\n"))
+    # 过滤数据，提取所需基因
+    filtered_counts <- count %>% filter(rownames(.) %in% sig)
+    long_data <- filtered_counts %>% as.data.frame() %>% mutate(gene=rownames(.)) %>% 
+      pivot_longer(cols = -gene, names_to = "ID", values_to = "value") %>% 
+      left_join(cell_info,"ID") 
+    
+    w <- cell_info %>% filter(EGFR_Status=="WT") %>% pull(ID)
+    l <- cell_info %>% filter(EGFR_Status=="L858R") %>% pull(ID)
+    d <- cell_info %>% filter(EGFR_Status=="exon19del") %>% pull(ID)
+    dl <- cell_info %>% filter(EGFR_Status=="L858R.exon19del") %>% pull(ID)
+    other <- cell_info %>% filter(EGFR_Status=="others") %>% pull(ID)
+    
+    EGFR_Status <- c('WT' = 'grey', 'L858R' = '#FF4500',
+    'exon19del' = '#0066FF','L858R.exon19del'='yellow','others' = 'black')
+    long_data$ID <- factor(long_data$ID,levels = c(w,l,d,dl,other))
+    # Create the boxplot plot
+    ggplot(long_data, aes(x = ID, y = value, fill = EGFR_Status)) +
+      geom_boxplot() +
+      labs(title = paste(name_df$abbreviate[sig_num],"signature in Chen, Yi-Ju et al."),
+           x = "patients",
+           y = "Expression Value (log2FC)") +
+      theme_minimal() +  
+      scale_fill_manual(values = EGFR_Status) +
+      theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+      scale_y_continuous(limits = c(-4, 4))
   }
-  ggplot(df, aes(x = !!sym(by), y = count)) +
-    geom_boxplot()+
-    labs(title = paste0(gene," (2020 cell RNA expression)"),
-         x = "Groups",
-         y = "log2FC") +
-    theme_minimal() + geom_hline(yintercept = 0, 
-                              color = "dodgerblue", linetype = 'solid', linewidth = 0.7)
+}
+
+
+# draw_Spearman_bar -------------------------------------------------------
+draw_Spearman_bar <- function(sig_num,group="ALL"){
+  # 函数：计算组别之间的Spearman相关系数
+  compute_spearman <- function(group1, group2) {
+    cor(group1, group2, method = "spearman")
+  }
   
+  sig <- get_deg(name_df$file_name[sig_num], type = "ENSEMBL")
+  cat(c(" -> get",name_df$abbreviate[sig_num], "signature\n"))
+  
+  # 过滤数据，提取所需基因
+  filtered_counts <- abbr_count %>% filter(rownames(.) %in% sig)
+  # 定义组别名称列表
+  group_names <- colnames(abbr_count)
+  
+  # 初始化存储相关系数的矩阵
+  spearman_corr_matrix <- matrix(nrow = length(group_names), ncol = 1)
+  rownames(spearman_corr_matrix) <- group_names
+  colnames(spearman_corr_matrix) <- name_df$abbreviate[sig_num]
+  
+  # 计算组别之间的Spearman相关系数
+  for (i in 1:length(group_names)) {
+    group1 <- filtered_counts[, group_names[i]]
+    group2 <- filtered_counts[, group_names[sig_num]]
+    spearman_corr_matrix[i, 1] <- compute_spearman(group1, group2)
+  }
+  
+  data <- spearman_corr_matrix %>% as.data.frame() %>% setNames("Spearman") %>% 
+    rownames_to_column("group") %>% mutate(clone=substr(group,1,1))
+  data$clone <- factor(data$clone, levels = c("W","L","D","Y"))
+  data$group <- factor(data$group, levels = name_df$abbreviate)
+  clone = c('W' = '#AAAAAA', 'L' = '#FF4500',
+            'D' = '#0066FF', 'Y' = '#00FF00')
+  
+  if(group=="AS"){
+    data <- data %>% dplyr::filter(group %in% name_df$abbreviate[c(5,18,31,44)])
+  } else if(group=="CO"){
+    data <- data %>% dplyr::filter(group %in% name_df$abbreviate[c(6,19,32,45)])
+  } else if(group=="CD"){ 
+    data <- data %>% dplyr::filter(group %in% name_df$abbreviate[c(7,8,20,21,33,34,46,47)])
+  } else if(group=="ALL"){
+    data
+  }
+  
+  ggplot(data, aes(x = group, y = Spearman, fill = clone)) +
+    geom_bar(stat = "identity") +
+    scale_fill_manual(values = clone) +  # 使用自定义颜色
+    labs(title = paste(name_df$abbreviate[sig_num],"signature (RNA-seq)"),
+         x = "Groups",
+         y = "Spearman's correlation") +
+    theme_minimal() +
+    theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5))
+}
+
+
+# draw_violin -------------------------------------------------------------
+draw_violin <- function(sig_num,group="ALL"){
+  sig <- get_deg(name_df$file_name[sig_num], type = "ENSEMBL",dir = "up")
+  cat(c(" -> get",name_df$abbreviate[sig_num], "signature\n"))
+  
+  # 过滤数据，提取所需基因
+  filtered_counts <- abbr_count %>% filter(rownames(.) %in% sig)
+  
+  if(group=="AS"){
+    mat <- filtered_counts %>% dplyr::select(name_df$abbreviate[AS])
+    long_data <- mat %>% as.data.frame() %>% mutate(gene=rownames(.)) %>% 
+      pivot_longer(cols = -gene, names_to = "condition", values_to = "value")
+    long_data$condition <- factor(long_data$condition,levels = name_df$abbreviate[AS])
+  } else if(group=="CO"){
+    mat <- filtered_counts %>% dplyr::select(name_df$abbreviate[CO])
+    long_data <- mat %>% as.data.frame() %>% mutate(gene=rownames(.)) %>% 
+      pivot_longer(cols = -gene, names_to = "condition", values_to = "value")
+    long_data$condition <- factor(long_data$condition,levels = name_df$abbreviate[CO])
+  } else if(group=="CD"){ 
+    mat <- filtered_counts %>% dplyr::select(name_df$abbreviate[CD])
+    long_data <- mat %>% as.data.frame() %>% mutate(gene=rownames(.)) %>% 
+      pivot_longer(cols = -gene, names_to = "condition", values_to = "value")
+    long_data$condition <- factor(long_data$condition,levels = name_df$abbreviate[CD])
+  } else {
+    mat <- filtered_counts
+    long_data <- mat %>% as.data.frame() %>% mutate(gene=rownames(.)) %>% 
+      pivot_longer(cols = -gene, names_to = "condition", values_to = "value")
+    long_data$condition <- factor(long_data$condition,levels = name_df$abbreviate)
+  }
+  
+  
+  # Create the violin plot
+  ggplot(long_data, aes(x = condition, y = log(value), fill = condition)) +
+    geom_violin() +
+    labs(title = "Violin Plot of Gene Expressions (log scale)",
+         x = "Condition",
+         y = "Expression Value") +
+    theme_minimal() +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1))
 }
