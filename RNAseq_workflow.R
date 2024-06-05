@@ -27,6 +27,8 @@ red_white_blue_colors <- c("blue", "white", "red")
 rwb_palette <- grDevices::colorRampPalette(red_white_blue_colors)
 n_colors <- 10
 colors <- rwb_palette(n_colors)
+clone = c('WT' = '#AAAAAA', 'L858R' = '#FF4500',
+          'Del19' = '#0066FF', 'YAP' = '#CA8EFF')
 
 ### 1.input raw_count data ----------------------------------------------------
 # load annotation data
@@ -170,7 +172,7 @@ fig <- plotly::plot_ly(components, x = ~PC1, y = ~PC2, z = ~PC3, color = ~group,
   plotly::add_markers(size = 12)  
 fig %>% layout(title = tit, scene = list(bgcolor = "#e5ecf6"))
 
-### 4.DEG analysis ----------------------------------------------------------
+### 4-1.DEG analysis ----------------------------------------------------------
 num <- c(3:13, 16:26, 29:39, 42:52)
 # get DEG number in each groups
 DEG_num <- data.frame(file = character(), up_regulation = numeric(),
@@ -220,8 +222,8 @@ ggplot(DEG_num_long, aes(x = group, y = count, fill = count_type)) +
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
-### get DEG SYMBOL
-top <- 100
+### 4-2.get DEG and plot in each groups ---------------------------------------
+top <- 200
 logcrit <- 1
 # 初始化
 DEG_df <- data.frame(num = 1:top)
@@ -264,19 +266,55 @@ DEG <- DEG_df[,-1]
 enrich_de <- table(unlist(DEG)) %>% sort(decreasing = T)
 head(enrich_de,50)
 
-# DEG count df
-deg_count <- data.frame(gene=enrich_de)
-deg_count$gene.Var1 <- factor(deg_count$gene.Var1, levels = deg_count$gene.Var1)
-# 绘制 count 的柱状图
-ggplot(deg_count[1:30,], aes(x = gene.Var1, y = gene.Freq)) +
-  geom_bar(stat = "identity", fill = "skyblue") +
-  theme_minimal() +
-  labs(title = "count of DEG in all groups", x = "gene Symbol", y = "Count") + 
-  theme(axis.text.x = element_text(angle = 45, hjust = 1))
-# bar plot
-draw_bar(names(enrich_de)[10],group = "ALL")
+# get DEG in each clone
+w_up <- DEG[, grep("^W.*_up$", colnames(DEG), value = TRUE)] %>% unlist() %>% table()%>% as.data.frame()
+l_up <- DEG[, grep("^L.*_up$", colnames(DEG), value = TRUE)] %>% unlist() %>% table()%>% as.data.frame()
+d_up <- DEG[, grep("^D.*_up$", colnames(DEG), value = TRUE)] %>% unlist() %>% table()%>% as.data.frame()
+y_up <- DEG[, grep("^Y.*_up$", colnames(DEG), value = TRUE)] %>% unlist() %>% table()%>% as.data.frame()
+# count DEG
+deg_count_df <- w_up %>% 
+  full_join(l_up, by=".") %>% 
+  full_join(d_up, by=".") %>% 
+  full_join(y_up, by=".") %>% 
+  setNames(c("gene","WT","L858R","Del19","YAP")) %>% 
+  replace_na(list(WT = 0, L858R = 0, Del19 = 0, YAP = 0)) %>% 
+  mutate(max_diff= pmax(WT, L858R, Del19, YAP) - pmin(WT, L858R, Del19, YAP)) %>%
+  mutate(total_count=WT+L858R+Del19+YAP) %>% 
+  filter(total_count > 20) %>% 
+  arrange(desc(max_diff))
+head(deg_count_df)
 
-### get all DEG list
+# 将数据从宽格式转换为长格式
+deg_count_df$gene <- factor(deg_count_df$gene, levels = deg_count_df$gene)
+df_long <- deg_count_df %>% .[1:10,] %>% 
+  pivot_longer(cols = c("WT", "L858R", "Del19", "YAP"), 
+               names_to = "category", 
+               values_to = "value")
+
+# 绘制条形图
+ggplot(df_long, aes(x = gene, y = value, fill = category)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "", x = "gene", y = "count number") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) + 
+  scale_fill_manual(values = clone)
+
+# barplot
+draw_bar(deg_count_df$gene[6])
+
+# # DEG count df
+# deg_count <- data.frame(gene=enrich_de)
+# deg_count$gene.Var1 <- factor(deg_count$gene.Var1, levels = deg_count$gene.Var1)
+# # 绘制 count 的柱状图
+# ggplot(deg_count[1:30,], aes(x = gene.Var1, y = gene.Freq)) +
+#   geom_bar(stat = "identity", fill = "skyblue") +
+#   theme_minimal() +
+#   labs(title = "count of DEG in all groups", x = "gene Symbol", y = "Count") + 
+#   theme(axis.text.x = element_text(angle = 45, hjust = 1))
+# # bar plot
+# draw_bar(names(enrich_de)[10],group = "ALL")
+
+### 4-3.get all DEG list ---------------------------------------------
 all_deg_list <- c()
 for(i in name_df$file_name[num]){
   # 讀取 Excel 文件
@@ -733,7 +771,7 @@ cell_count$Median <- NULL
 
 # draw boxplot by 'Gender','Smoking Status','Stage' or 'EGFR_Status'
 gene <- names(enrich_de[1])
-gene <- "ERBB2"
+gene <- "KRT80"
 print(gene)
 draw_cell_boxplot(gene = gene, by="EGFR_Status")
 draw_cell_boxplot(gene = gene, by="Stage")
