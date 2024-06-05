@@ -259,7 +259,7 @@ for (i in name_df$file_name[num]) {
 head(DEG_df)
 DEG <- DEG_df[,-1]
 # openxlsx::write.xlsx(DEG,"data/DEG.xlsx")
-DEG <- readxl::read_excel("data/DEG.xlsx") %>% as.data.frame()
+# DEG <- readxl::read_excel("data/DEG.xlsx") %>% as.data.frame()
 # 對數據框中的每一列計數
 enrich_de <- table(unlist(DEG)) %>% sort(decreasing = T)
 head(enrich_de,50)
@@ -271,7 +271,8 @@ deg_count$gene.Var1 <- factor(deg_count$gene.Var1, levels = deg_count$gene.Var1)
 ggplot(deg_count[1:30,], aes(x = gene.Var1, y = gene.Freq)) +
   geom_bar(stat = "identity", fill = "skyblue") +
   theme_minimal() +
-  labs(title = "count of DEG in all groups", x = "gene Symbol", y = "Count")
+  labs(title = "count of DEG in all groups", x = "gene Symbol", y = "Count") + 
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
 # bar plot
 draw_bar(names(enrich_de)[10],group = "ALL")
 
@@ -704,7 +705,7 @@ non_asian_id <- clin.LUAD %>%
   filter(race!="asian" & gender=="female") %>% 
   pull(submitter_id)
 ### draw box plot
-draw_TCGA_boxplot("KRT15")
+draw_TCGA_boxplot("SERPINE1")
 
 ### survival
 # load TCGA-LUAD patient data
@@ -714,28 +715,44 @@ maf_object <- "/Users/benson/Documents/project/RNA-seq1-3/data/maf_object.RDS" %
 clin.LUAD <- "/Users/benson/Documents/project/RNA-seq1-3/data/clin_LUAD.RDS" %>% 
   readRDS()
 # plot survival curve(in 'output' file)
-draw_survival("ANKRD1")
+draw_survival("SERPINE1")
 
 ### 17.2020 cellpress -------------------------------------------------------
-cell_info <- readxl::read_excel("/Users/benson/Documents/project/RNA-seq1-3/data/2020cell_info.xlsx")
+cell_info <- readxl::read_excel("/Users/benson/Documents/project/RNA-seq1-3/data/2020cell_info.xlsx") %>% 
+  as.data.frame() %>% 
+  mutate(Stage=ifelse(Stage %in% c("IA","IB"), "stage I",Stage)) %>% 
+  mutate(Stage=ifelse(Stage %in% c("IIA","IIB"), "stage II",Stage)) %>% 
+  mutate(Stage=ifelse(Stage %in% c("IIIA","IIIB"), "stage III",Stage)) %>%
+  mutate(Stage=ifelse(Stage %in% c("IV"), "stage IV",Stage)) %>% 
+  rename(Smoking_Status=`Smoking Status`)
+  
 cell_count <- readxl::read_excel("/Users/benson/Documents/project/RNA-seq1-3/data/2020cell.xlsx") %>% 
   as.data.frame() %>% group_by(gene) %>% summarize(across(where(is.numeric), sum)) %>% 
   column_to_rownames("gene")
 cell_count$Median <- NULL
 
 # draw boxplot by 'Gender','Smoking Status','Stage' or 'EGFR_Status'
-gene <- "KRT15"
-draw_cell_boxplot(gene, by="Gender")
-draw_cell_boxplot(gene, by="Smoking Status")
-draw_cell_boxplot(gene, by="Stage")
-draw_cell_boxplot(gene, by="EGFR_Status")
+gene <- names(enrich_de[1])
+gene <- "ERBB2"
+print(gene)
+draw_cell_boxplot(gene = gene, by="EGFR_Status")
+draw_cell_boxplot(gene = gene, by="Stage")
+draw_cell_boxplot(gene = gene, by="Gender")
+draw_cell_boxplot(gene = gene, by="Smoking_Status")
 
 # signature
-draw_cell_boxplot(sig_num = 26)
+sig <- get_deg(name_df$file_name[13]) %>% head(10)
+title <- ""
+draw_cell_boxplot(sig = sig, by="EGFR_Status", title = title)
+draw_cell_boxplot(sig = sig, by="Stage", title = title)
+draw_cell_boxplot(sig = sig, by="Gender", title = title)
+draw_cell_boxplot(sig = sig, by="Smoking_Status", title = title)
+# ggsave("output/1.png")
 
 ### 18.Spearman's correlation for signature ----------------------------------
 ### Spearman's correlation
-draw_Spearman_bar(18,"AS")
+draw_Spearman_bar(sig_num = 5, group = "AS",top = 30)
+draw_Spearman_bar(sig_num = 52, top = 10, count_df = "cell")
 
 ### signature
-draw_violin(sig_num = 8,"CD")
+draw_boxplot(sig_num = 10, group = "ALL", top = 20)
