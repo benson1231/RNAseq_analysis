@@ -1352,7 +1352,7 @@ draw_TCGA_boxplot <- function(gene){
     geom_boxplot()+
     labs(title = paste0(gene," (TCGA RNA expression)"),
          x = "Groups",
-         y = "Expression Level (log(count))") +
+         y = "Expression Level (log.count)") +
     theme_minimal()
   # 在箱线图上添加 t 检验结果
   p + geom_text(aes(x = 1.25, y = 7, 
@@ -1361,110 +1361,202 @@ draw_TCGA_boxplot <- function(gene){
 }
 
 # draw_cell_boxplot --------------------------------------------------------
-draw_cell_boxplot <- function(gene=NULL, by=NULL, sig_num=NULL){
-  if(is.null(sig_num)){
-    if(!(by %in% c("Gender","Smoking Status","Stage","EGFR_Status"))){
-      stop("error: 'by' must be 'Gender','Smoking Status','Stage','EGFR_Status'")
+draw_cell_boxplot <- function(gene=NULL, by=NULL, sig=NULL, top=50, title=NULL){
+  if(is.null(sig)){
+    if(!(by %in% c("Gender","Smoking_Status","Stage","EGFR_Status"))){
+      stop("error: 'by' must be 'Gender','Smoking_Status','Stage','EGFR_Status'")
     }
-    df <- cell_count %>% filter(rownames(.)==gene) %>% t() %>%  as.data.frame() %>% 
+    df <- cell_count %>% dplyr::filter(rownames(.)==gene) %>% t() %>%  
+      as.data.frame() %>% 
       setNames("count") %>% rownames_to_column("ID") %>% left_join(cell_info,"ID")
+    # 根據by參數設置因子
+    df[[by]] <- as.factor(df[[by]])
+    # 執行單因素ANOVA
+    formula <- as.formula(paste("count ~", `by`))
+    anova_result <- aov(formula, data = df)
+    
+    # 如果有顯著差異，進行Tukey HSD檢定
+    tukey_result <- TukeyHSD(anova_result)
+    
+    # 提取與第一個組別比較的p值
+    first_group <- levels(df[[by]])[1]
+    comparisons <- sapply(levels(df[[by]])[-1], function(group) {
+      ifelse(first_group < group, paste0(group, "-", first_group), paste0(group, "-", first_group))
+    })
+    p_values <- sapply(comparisons, function(comp) {
+      tukey_result[[by]][comp, "p adj"]
+    })
+    
+    max_counts <- df %>%
+      group_by(!!sym(by)) %>%
+      summarise(max_count = max(count))
+    # 創建包含 p 值的數據框
+    p_labels <- data.frame(
+      Group = levels(df[[by]])[-1],
+      p_value = round(p_values, 4)
+    ) %>%
+      rename(!!by := Group) %>% 
+      left_join(max_counts, by = by) %>%
+      mutate(y_position = max_count + 0.5)
+    
     ggplot(df, aes(x = !!sym(by), y = count)) +
-      geom_boxplot()+
-      labs(title = paste0(gene," ( RNA expression in Chen, Yi-Ju et al.)"),
+      geom_boxplot() +
+      labs(title = paste0(gene, " (RNA expression in Chen, Yi-Ju et al.)"),
            x = "Groups",
            y = "log2FC") +
-      theme_minimal() + geom_hline(yintercept = 0, 
-                                   color = "dodgerblue", linetype = 'solid', linewidth = 0.7)
+      theme_minimal() + 
+      geom_hline(yintercept = 0, color = "dodgerblue", 
+                 linetype = 'solid', linewidth = 0.7) +
+      geom_hline(yintercept = 1, color = "red", 
+                 linetype = 'solid', linewidth = 0.7) +
+      geom_text(data = p_labels, aes(x = !!sym(by), y = y_position, 
+                                     label = paste0("p = ", p_value)),
+                vjust = -0.5, color = "black")
+    
   } else{
-    sig <- get_deg(name_df$file_name[sig_num], type = "SYMBOL",dir = "up",top = 100)
-    cat(c(" -> get",name_df$abbreviate[sig_num], "signature\n"))
+    cat(c(" -> get",length(sig), "gene list for signature\n"))
     # 过滤数据，提取所需基因
-    filtered_counts <- count %>% filter(rownames(.) %in% sig)
+    cell_info <- cell_info %>% as.data.frame()
+    filtered_counts <- cell_count %>% dplyr::filter(rownames(.) %in% sig)
     long_data <- filtered_counts %>% as.data.frame() %>% mutate(gene=rownames(.)) %>% 
       pivot_longer(cols = -gene, names_to = "ID", values_to = "value") %>% 
       left_join(cell_info,"ID") 
     
-    w <- cell_info %>% filter(EGFR_Status=="WT") %>% pull(ID)
-    l <- cell_info %>% filter(EGFR_Status=="L858R") %>% pull(ID)
-    d <- cell_info %>% filter(EGFR_Status=="exon19del") %>% pull(ID)
-    dl <- cell_info %>% filter(EGFR_Status=="L858R.exon19del") %>% pull(ID)
-    other <- cell_info %>% filter(EGFR_Status=="others") %>% pull(ID)
+    sorted_data <- long_data %>%
+      mutate(Gender = factor(Gender, levels = c("Male", "Female"))) %>% 
+      mutate(Smoking_Status = factor(Smoking_Status, levels = c("Nonsmoke", "Ex-smoker","Current_Smoker"))) %>% 
+      mutate(Stage = factor(Stage, levels = c("stage I", "stage II","stage III","stage IV"))) %>%
+      mutate(EGFR_Status = factor(EGFR_Status, levels = c("WT", "L858R","exon19del","L858R.exon19del","others"))) %>% 
+      arrange(!!sym(by))
+    sorted_data$ID <- factor(sorted_data$ID, levels = unique(sorted_data$ID))
     
-    EGFR_Status <- c('WT' = 'grey', 'L858R' = '#FF4500',
-    'exon19del' = '#0066FF','L858R.exon19del'='yellow','others' = 'black')
-    long_data$ID <- factor(long_data$ID,levels = c(w,l,d,dl,other))
+    if(by=="Gender"){
+      col <- c('Male' = 'white', 'Female' = 'grey40')
+    } else if(by=="Smoking_Status"){
+      col <- c("Nonsmoke"='white', "Ex-smoker"='grey',"Current_Smoker"='black')
+    } else if(by=="Stage"){
+      col <- c('stage I' = 'white','stage II' = 'grey85','stage III' = 'grey60','stage IV' = 'black')
+    } else if(by=='EGFR_Status'){
+      col <- c('WT' = 'grey', 'L858R' = '#FF4500',
+               'exon19del' = '#0066FF','L858R.exon19del'='yellow','others' = 'black')
+    }
+    
     # Create the boxplot plot
-    ggplot(long_data, aes(x = ID, y = value, fill = EGFR_Status)) +
+    ggplot(sorted_data, aes(x = ID, y = value, fill = !!sym(by))) +
       geom_boxplot() +
-      labs(title = paste(name_df$abbreviate[sig_num],"signature in Chen, Yi-Ju et al."),
+      labs(title = paste(title ,"signature in Chen, Yi-Ju et al."),
            x = "patients",
            y = "Expression Value (log2FC)") +
       theme_minimal() +  
-      scale_fill_manual(values = EGFR_Status) +
       theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-      scale_y_continuous(limits = c(-4, 4))
+      scale_y_continuous(limits = c(-4, 4)) +
+      geom_hline(yintercept = 0, 
+                 color = "black", linetype = 'solid', linewidth = 0.7)+
+      geom_hline(yintercept = 1, 
+                 color = "red", linetype = 'solid', linewidth = 0.7) + 
+      scale_fill_manual(values = col)
   }
 }
 
 
 # draw_Spearman_bar -------------------------------------------------------
-draw_Spearman_bar <- function(sig_num,group="ALL"){
+draw_Spearman_bar <- function(sig_num=NULL,group="ALL",top=50,count_df="my"){
+  if(!(count_df %in% c("my","cell"))){
+    stop(" error: count must be 'my' or 'cell'\n")
+  }
   # 函数：计算组别之间的Spearman相关系数
   compute_spearman <- function(group1, group2) {
     cor(group1, group2, method = "spearman")
   }
   
-  sig <- get_deg(name_df$file_name[sig_num], type = "ENSEMBL")
-  cat(c(" -> get",name_df$abbreviate[sig_num], "signature\n"))
+  if(count_df == "my"){
+    sig <- get_deg(name_df$file_name[sig_num], type = "ENSEMBL") %>% head(top)
+    cat(c(" -> get",name_df$abbreviate[sig_num], "top",top,"signature\n"))
+    filtered_counts <- abbr_count %>% filter(rownames(.) %in% sig)
+    group1 <- filtered_counts[,name_df$abbreviate[sig_num]]
+  } else{
+    my_df <- readxl::read_excel(file.path(data_path,name_df$file_name[sig_num])) %>% 
+      dplyr::select(SYMBOL,M) %>% setNames(c("SYMBOL",name_df$abbreviate[sig_num]))
+    sig <- get_deg(name_df$file_name[sig_num], type = "SYMBOL") %>% head(top)
+    cat(c(" -> get",name_df$abbreviate[sig_num], "top",top,"signature\n"))
+    filtered_counts <- cell_count %>% rownames_to_column("SYMBOL") %>% 
+    left_join(.,my_df,by="SYMBOL") %>%filter(SYMBOL %in% sig) %>% 
+      column_to_rownames("SYMBOL")
+    group1 <- filtered_counts[,name_df$abbreviate[sig_num]]
+    filtered_counts[,name_df$abbreviate[sig_num]] <- NULL
+  }
   
-  # 过滤数据，提取所需基因
-  filtered_counts <- abbr_count %>% filter(rownames(.) %in% sig)
   # 定义组别名称列表
-  group_names <- colnames(abbr_count)
+  group_names <- colnames(filtered_counts)
   
   # 初始化存储相关系数的矩阵
   spearman_corr_matrix <- matrix(nrow = length(group_names), ncol = 1)
   rownames(spearman_corr_matrix) <- group_names
-  colnames(spearman_corr_matrix) <- name_df$abbreviate[sig_num]
+  colnames(spearman_corr_matrix) <- "signature"
   
   # 计算组别之间的Spearman相关系数
   for (i in 1:length(group_names)) {
-    group1 <- filtered_counts[, group_names[i]]
-    group2 <- filtered_counts[, group_names[sig_num]]
+    group2 <- filtered_counts[, group_names[i]]
     spearman_corr_matrix[i, 1] <- compute_spearman(group1, group2)
   }
   
-  data <- spearman_corr_matrix %>% as.data.frame() %>% setNames("Spearman") %>% 
-    rownames_to_column("group") %>% mutate(clone=substr(group,1,1))
-  data$clone <- factor(data$clone, levels = c("W","L","D","Y"))
-  data$group <- factor(data$group, levels = name_df$abbreviate)
-  clone = c('W' = '#AAAAAA', 'L' = '#FF4500',
-            'D' = '#0066FF', 'Y' = '#00FF00')
-  
-  if(group=="AS"){
-    data <- data %>% dplyr::filter(group %in% name_df$abbreviate[c(5,18,31,44)])
-  } else if(group=="CO"){
-    data <- data %>% dplyr::filter(group %in% name_df$abbreviate[c(6,19,32,45)])
-  } else if(group=="CD"){ 
-    data <- data %>% dplyr::filter(group %in% name_df$abbreviate[c(7,8,20,21,33,34,46,47)])
-  } else if(group=="ALL"){
-    data
+  if(count_df=="my"){
+    data <- spearman_corr_matrix %>% as.data.frame() %>% setNames("Spearman") %>% 
+      rownames_to_column("group") %>% mutate(clone=substr(group,1,1))
+    data$clone <- factor(data$clone, levels = c("W","L","D","Y"))
+    data$group <- factor(data$group, levels = name_df$abbreviate)
+    clone = c('W' = '#AAAAAA', 'L' = '#FF4500',
+              'D' = '#0066FF', 'Y' = '#00FF00')
+    
+    if(group=="AS"){
+      data <- data %>% dplyr::filter(group %in% name_df$abbreviate[c(5,18,31,44)])
+    } else if(group=="CO"){
+      data <- data %>% dplyr::filter(group %in% name_df$abbreviate[c(6,19,32,45)])
+    } else if(group=="CD"){ 
+      data <- data %>% dplyr::filter(group %in% name_df$abbreviate[c(7,8,20,21,33,34,46,47)])
+    } else if(group=="ALL"){
+      data
+    }
+    
+    ggplot(data, aes(x = group, y = Spearman, fill = clone)) +
+      geom_bar(stat = "identity") +
+      scale_fill_manual(values = clone) +  # 使用自定义颜色
+      labs(title = paste(name_df$abbreviate[sig_num],"signature (RNA-seq)"),
+           x = "Groups",
+           y = "Spearman's correlation") +
+      theme_minimal() +
+      theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5))
+  } else{
+    data <- spearman_corr_matrix %>% as.data.frame() %>% setNames("Spearman") %>% 
+      rownames_to_column("ID") %>% left_join(cell_info,by = "ID") %>% 
+      arrange(desc(Spearman))
+    
+    w <- data %>% filter(EGFR_Status=="WT") %>% pull(ID)
+    l <- data %>% filter(EGFR_Status=="L858R") %>% pull(ID)
+    d <- data %>% filter(EGFR_Status=="exon19del") %>% pull(ID)
+    dl <- data %>% filter(EGFR_Status=="L858R.exon19del") %>% pull(ID)
+    other <- data %>% filter(EGFR_Status=="others") %>% pull(ID)
+    
+    EGFR_Status <- c('WT' = 'grey', 'L858R' = '#FF4500',
+                     'exon19del' = '#0066FF','L858R.exon19del'='yellow','others' = 'black')
+    data$ID <- factor(data$ID,levels = c(w,l,d,dl,other))
+    
+    ggplot(data, aes(x = ID, y = Spearman, fill = EGFR_Status)) +
+      geom_bar(stat = "identity") +
+      scale_fill_manual(values = EGFR_Status) +  # 使用自定义颜色
+      labs(title = paste(name_df$abbreviate[sig_num],"signature (RNA-seq)"),
+           x = "Groups",
+           y = "Spearman's correlation") +
+      theme_minimal() +
+      theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5))
   }
-  
-  ggplot(data, aes(x = group, y = Spearman, fill = clone)) +
-    geom_bar(stat = "identity") +
-    scale_fill_manual(values = clone) +  # 使用自定义颜色
-    labs(title = paste(name_df$abbreviate[sig_num],"signature (RNA-seq)"),
-         x = "Groups",
-         y = "Spearman's correlation") +
-    theme_minimal() +
-    theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5))
 }
 
 
-# draw_violin -------------------------------------------------------------
-draw_violin <- function(sig_num,group="ALL"){
-  sig <- get_deg(name_df$file_name[sig_num], type = "ENSEMBL",dir = "up")
+# draw_boxplot -------------------------------------------------------------
+draw_boxplot <- function(sig_num,group="ALL", top=50){
+  sig <- get_deg(name_df$file_name[sig_num], type = "ENSEMBL",dir = "up") %>% 
+    head(top)
   cat(c(" -> get",name_df$abbreviate[sig_num], "signature\n"))
   
   # 过滤数据，提取所需基因
@@ -1492,13 +1584,18 @@ draw_violin <- function(sig_num,group="ALL"){
     long_data$condition <- factor(long_data$condition,levels = name_df$abbreviate)
   }
   
+  long_data <- long_data %>% mutate(clone=substr(condition,1,1))
+  long_data$clone <- factor(long_data$clone, levels = c("W","L","D","Y"))
+  clone = c('W' = '#AAAAAA', 'L' = '#FF4500',
+            'D' = '#0066FF', 'Y' = '#00FF00')
   
   # Create the violin plot
-  ggplot(long_data, aes(x = condition, y = log(value), fill = condition)) +
-    geom_violin() +
-    labs(title = "Violin Plot of Gene Expressions (log scale)",
-         x = "Condition",
-         y = "Expression Value") +
+  ggplot(long_data, aes(x = condition, y = log(value), fill = clone)) +
+    geom_boxplot() +
+    labs(title = paste(name_df$abbreviate[sig_num],"signature"),
+         x = "Groups",
+         y = "Gene expression") +
     theme_minimal() +
+    scale_fill_manual(values = clone) +
     theme(axis.text.x = element_text(angle = 45, hjust = 1))
 }
