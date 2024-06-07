@@ -30,7 +30,7 @@ colors <- rwb_palette(n_colors)
 clone = c('WT' = '#AAAAAA', 'L858R' = '#FF4500',
           'Del19' = '#0066FF', 'YAP' = '#CA8EFF')
 
-### 1.input raw_count data ----------------------------------------------------
+### 1-1.input raw_count data ----------------------------------------------------
 # load annotation data
 gene_df <- "/Users/benson/Documents/project/RNA-seq1-3/data/anno_gene.RDS" %>% 
   readRDS() %>% dplyr::select(ENSEMBL,SYMBOL)
@@ -62,8 +62,7 @@ gene_count <- abbr_count %>%
 muta_rate <- "/Users/benson/Documents/project/RNA-seq1-3/data/muta_rate.RDS" %>% 
   readRDS()
 
-### 2.plot function --------------------------------------------------------------
-### heatmap for single gene list
+### 2-1.heatmap ----------------------------------------------------------
 gene_list <- c("ROX1","YAP1","LATS1","LATS2","TEAD")
 draw_from_list(gene_list, groups = "CO")
 draw_from_list(gene_list, groups = "CD", col_cluster = T, row_cluster = T)
@@ -80,24 +79,25 @@ p2 <- draw_from_list(list = list2,
                      id = "SYMBOL",label_num = F,anno = F,title = "")
 p1 %v% p2
 
-### bar plot 
+
+### 2-2.bar plot  -----------------------------------------------------------
 # bar plot of gene expression(CPM)
 draw_bar("RRAD", group = "ALL")
 
-### MD plot
+### 2-3.MD plot --------------------------------------------------------
 # log fold changes(differences, D) versus average log values(means, M)
-plot_MD("ip_L_V_S_AS_BAP_0_deg.xlsx", only_DE = T, plot_type = 2)
+plot_MD("ip_L_V_S_AS_BAP_0_deg.xlsx", only_DE = T, plot_type = 1)
 # with non-significant genes(it may take while)
 plot_MD("ip_L_V_S_HCD_BAP_0_deg.xlsx")
 
-### 3.euclidean distance, MDS and 3D PCA ----------------------------
-### euclidean distance(use logCPM)
+### 3-1.euclidean distance(use logCPM) ----------------------------
 euclidean_dist <- dist(t(mylogCPM), method = "euclidean")
 distance_matrix <- as.matrix(euclidean_dist) 
 # euclidean distance heatmap
 ComplexHeatmap::Heatmap(distance_matrix, name = "euclidean_dist")
 
-### preparing sample annotation
+### 3-2.highly variable genes ------------------------------------
+# preparing sample annotation
 abbr_sampleinfo <- data.frame(row = names(mylogCPM),
                               sample = names(mylogCPM), 
                               treatment = str_sub(names(mylogCPM), start=3),
@@ -119,7 +119,12 @@ draw_from_list(rownames(highly_variable_lcpm),groups = "ALL",id = "ENSEMBL",
                show_row_names = F, title = "Top 500 most variable genes across samples",
                col_cluster = F,filter = F,row_km = 5)
 
-### Create a DGEList object
+### highly variable genes in gene SYMBOL
+var_genes <- apply(gene_count, 1, var) %>% sort(,decreasing = T)
+head(var_genes, 50)
+
+### 3-3.MDS ----------------------------------
+# Create a DGEList object
 DEG_obj <- edgeR::DGEList(abbr_count) 
 # set factor
 abbr_sampleinfo$sample <- factor(abbr_sampleinfo$sample)
@@ -146,7 +151,7 @@ plotMDS(DEG_obj,col=col.cell,xlab = "Dimension 1",ylab = "Dimension 2")
 title("Cell type")
 legend("topleft",fill=c('#00DB00','#FF88C2','#0080FF', '#FF8000'),legend=levels(abbr_sampleinfo$cell))
 
-### 3D PCA
+### 3-4.3D PCA -------------------------------------------------------------
 library(plotly)
 # PCA
 count_mat <- t(abbr_count)
@@ -172,7 +177,11 @@ fig <- plotly::plot_ly(components, x = ~PC1, y = ~PC2, z = ~PC3, color = ~group,
   plotly::add_markers(size = 12)  
 fig %>% layout(title = tit, scene = list(bgcolor = "#e5ecf6"))
 
-### 4-1.DEG analysis ----------------------------------------------------------
+# another
+plot3D::scatter3D(components$PC1, components$PC2, components$PC3,
+                  pch = 16,xlab = pc1,ylab = pc2,zlab=pc3)
+
+### 4-1.DEG number in each group --------------------------------------------
 num <- c(3:13, 16:26, 29:39, 42:52)
 # get DEG number in each groups
 DEG_num <- data.frame(file = character(), up_regulation = numeric(),
@@ -222,8 +231,8 @@ ggplot(DEG_num_long, aes(x = group, y = count, fill = count_type)) +
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
-### 4-2.get DEG and plot in each groups ---------------------------------------
-top <- 200
+### 4-2.get DEGs and plot in each groups ---------------------------------------
+top <- 100
 logcrit <- 1
 # 初始化
 DEG_df <- data.frame(num = 1:top)
@@ -263,15 +272,15 @@ DEG <- DEG_df[,-1]
 # openxlsx::write.xlsx(DEG,"data/DEG.xlsx")
 # DEG <- readxl::read_excel("data/DEG.xlsx") %>% as.data.frame()
 # 對數據框中的每一列計數
-enrich_de <- table(unlist(DEG)) %>% sort(decreasing = T)
-head(enrich_de,50)
+de_count_all <- table(unlist(DEG)) %>% sort(decreasing = T)
+head(de_count_all,50)
 
-# get DEG in each clone
+### get DEG in each clone
 w_up <- DEG[, grep("^W.*_up$", colnames(DEG), value = TRUE)] %>% unlist() %>% table()%>% as.data.frame()
 l_up <- DEG[, grep("^L.*_up$", colnames(DEG), value = TRUE)] %>% unlist() %>% table()%>% as.data.frame()
 d_up <- DEG[, grep("^D.*_up$", colnames(DEG), value = TRUE)] %>% unlist() %>% table()%>% as.data.frame()
 y_up <- DEG[, grep("^Y.*_up$", colnames(DEG), value = TRUE)] %>% unlist() %>% table()%>% as.data.frame()
-# count DEG
+# count DEG and max_different in 4 clone
 deg_count_df <- w_up %>% 
   full_join(l_up, by=".") %>% 
   full_join(d_up, by=".") %>% 
@@ -283,14 +292,12 @@ deg_count_df <- w_up %>%
   filter(total_count > 20) %>% 
   arrange(desc(max_diff))
 head(deg_count_df)
-
 # 将数据从宽格式转换为长格式
 deg_count_df$gene <- factor(deg_count_df$gene, levels = deg_count_df$gene)
 df_long <- deg_count_df %>% .[1:10,] %>% 
   pivot_longer(cols = c("WT", "L858R", "Del19", "YAP"), 
                names_to = "category", 
                values_to = "value")
-
 # 绘制条形图
 ggplot(df_long, aes(x = gene, y = value, fill = category)) +
   geom_bar(stat = "identity", position = "dodge") +
@@ -298,9 +305,18 @@ ggplot(df_long, aes(x = gene, y = value, fill = category)) +
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1)) + 
   scale_fill_manual(values = clone)
+draw_bar(deg_count_df$gene[1])
 
-# barplot
-draw_bar(deg_count_df$gene[6])
+### use variance to get highly variable genes in each clone
+clone_var_genes <- deg_count_df %>% 
+  column_to_rownames("gene") %>% .[,1:4] %>% 
+  apply(., 1, var) %>% 
+  sort(,decreasing = T) %>% 
+  as.data.frame() %>% 
+  setNames("variance") %>% rownames_to_column("gene")
+deg_count_df <- deg_count_df %>% left_join(., clone_var_genes, by = "gene")
+head(deg_count_df, 10)
+draw_bar(clone_var_genes$gene[4])
 
 # # DEG count df
 # deg_count <- data.frame(gene=enrich_de)
@@ -743,7 +759,7 @@ non_asian_id <- clin.LUAD %>%
   filter(race!="asian" & gender=="female") %>% 
   pull(submitter_id)
 ### draw box plot
-draw_TCGA_boxplot("SERPINE1")
+draw_TCGA_boxplot("RAB7B")
 
 ### survival
 # load TCGA-LUAD patient data
@@ -752,8 +768,14 @@ maf_object <- "/Users/benson/Documents/project/RNA-seq1-3/data/maf_object.RDS" %
 # load TCGA-LUAD patient clinical data
 clin.LUAD <- "/Users/benson/Documents/project/RNA-seq1-3/data/clin_LUAD.RDS" %>% 
   readRDS()
-# plot survival curve(in 'output' file)
-draw_survival("SERPINE1")
+# TCGA-RNAseq data
+tcga_count <- "/Users/benson/Documents/project/RNA-seq1-3/data/tcga_count.RDS" %>% 
+  readRDS()
+
+# survival curve of mutation (in 'output' file)
+draw_muta_survival("SERPINE1")
+# survival curve of gene expression (in 'output' file)
+draw_TCGA_survival("CPA4", population = "ALL")
 
 ### 17.2020 cellpress -------------------------------------------------------
 cell_info <- readxl::read_excel("/Users/benson/Documents/project/RNA-seq1-3/data/2020cell_info.xlsx") %>% 
@@ -794,3 +816,7 @@ draw_Spearman_bar(sig_num = 52, top = 10, count_df = "cell")
 
 ### signature
 draw_boxplot(sig_num = 10, group = "ALL", top = 20)
+
+# 19.hallmark in cancer ---------------------------------------------------
+hallmark_df <- read.csv("/Users/benson/Desktop/hallmark/W_AS_hallmark", sep = "\t")
+
