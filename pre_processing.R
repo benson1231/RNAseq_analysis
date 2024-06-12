@@ -95,7 +95,7 @@ abline(h=median(mylogCPM),col="blue")
 
 # heatmap -----------------------------------------------------------------
 mylogCPM <- mylogCPM %>% as.data.frame()
-abbr_sampleinfo <- data.frame(row = names(mylogCPM),
+sampleinfo <- data.frame(row = names(mylogCPM),
                               sample = names(mylogCPM), 
                               treatment = str_sub(names(mylogCPM), start=3),
                               cell = str_sub(names(mylogCPM), start=1,end=1)) %>%
@@ -116,7 +116,7 @@ head(highly_variable_lcpm)
 mypalette <- RColorBrewer::brewer.pal(11,"RdYlBu")
 morecols <- colorRampPalette(mypalette)
 # Set up colour vector for celltype variable
-col.cell <- c("purple","orange")[abbr_sampleinfo$sample]
+col.cell <- c("purple","orange")[sampleinfo$sample]
 
 # Plot the heatmap
 png("heatmap1.png", width = 1500, height = 1000)
@@ -130,5 +130,5 @@ mypalette <- brewer.pal(11,"RdYlBu")
 morecols <- colorRampPalette(mypalette)
 png("heatmap2.png", width = 1500, height = 1000)
 aheatmap(highly_variable_lcpm, col=rev(morecols(50)), main="Top 500 most variable genes across samples",
-         annCol=abbr_sampleinfo[, c(2,3)], labCol=abbr_sampleinfo$sample, scale="row")
+         annCol=sampleinfo[, c(2,3)], labCol=sampleinfo$sample, scale="row")
 dev.off()
