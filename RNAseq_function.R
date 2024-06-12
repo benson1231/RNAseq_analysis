@@ -20,7 +20,7 @@ abb <- function(name,type="group"){
   if(type=="file"){
     df <- name_df %>% filter(file_name==name) %>% pull(abbreviate)
   } else{
-    df <- name_df %>% filter(group_name==name) %>% pull(abbreviate)
+    df <- name_df %>% filter(abbreviate==name) %>% pull(abbreviate)
   }
   return(df)
 }
@@ -63,7 +63,7 @@ draw_heatmap <- function(file=NULL,
          "only_LCD","only_HCD","only_CD","CON" or "ALL".')
   }
 
-  mat <- mycount_df %>% as.data.frame() %>% rownames_to_column("ENSEMBL") %>% 
+  mat <- mylogCPM %>% as.data.frame() %>% rownames_to_column("ENSEMBL") %>% 
     left_join(.,gene_df, by="ENSEMBL") %>% 
     group_by(SYMBOL) %>%
     summarize(across(where(is.numeric), sum)) %>% 
@@ -92,33 +92,33 @@ draw_heatmap <- function(file=NULL,
   
   # select groups
   if(groups == "AS"){
-    data_mat <- mat %>% dplyr::select(all_of(name_df$group_name[AS]))
+    data_mat <- mat %>% dplyr::select(all_of(name_df$abbreviate[AS]))
     ann <- list(agent = c('CON' = '#E0E0E0', 'DMS' = '#ADADAD', 'BAP' = '#33FF33',
                           'AS' = '#FFFF37', 'AS_BAP' = '#FFDC35'),
                 clone = c('WT' = '#AAAAAA', 'L858R' = '#FF4500',
                           'Del19' = '#0066FF', 'YAP' = '#CA8EFF'))
   } else if(groups == "CO"){
-    data_mat <- mat %>% dplyr::select(all_of(name_df$group_name[CO]))
+    data_mat <- mat %>% dplyr::select(all_of(name_df$abbreviate[CO]))
     ann <- list(agent = c('CON' = '#E0E0E0', 'DMS' = '#ADADAD', 'BAP' = '#33FF33',
                           'CO' = '#FF5151', 'CO_BAP' = '#CC0000'),
                 clone = c('WT' = '#AAAAAA', 'L858R' = '#FF4500',
                           'Del19' = '#0066FF', 'YAP' = '#CA8EFF'))
   } else if(groups == "CD"){
-    data_mat <- mat %>% dplyr::select(all_of(name_df$group_name[CD]))
+    data_mat <- mat %>% dplyr::select(all_of(name_df$abbreviate[CD]))
     ann <- list(agent = c('CON' = '#E0E0E0', 'DMS' = '#ADADAD', 'BAP' = '#33FF33',
                           'LCD' = '#1E90FF', 'HCD' = '#0000CD', 
                           'LCD_BAP' = '#0088A8', 'HCD_BAP' = '#000000'),
                 clone = c('WT' = '#AAAAAA', 'L858R' = '#FF4500',
                           'Del19' = '#0066FF', 'YAP' = '#CA8EFF'))
   } else if(groups == "BAP"){
-    data_mat <- mat %>% dplyr::select(all_of(name_df$group_name[BAP]))
+    data_mat <- mat %>% dplyr::select(all_of(name_df$abbreviate[BAP]))
     ann <- list(agent = c('CON' = '#E0E0E0', 'DMS' = '#ADADAD', 'BAP' = '#33FF33',
                           'AS_BAP' = '#FFDC35', 'CO_BAP' = '#CC0000',
                           'LCD_BAP' = '#0088A8', 'HCD_BAP' = '#000000'),
                 clone = c('WT' = '#AAAAAA', 'L858R' = '#FF4500',
                           'Del19' = '#0066FF', 'YAP' = '#CA8EFF'))
   } else if(groups == "ALL"){
-    data_mat <- mat %>% dplyr::select(all_of(name_df$group_name))
+    data_mat <- mat %>% dplyr::select(all_of(name_df$abbreviate))
     ann <- list(agent = c('CON' = '#E0E0E0', 'DMS' = '#ADADAD', 'AZA' = '#FFD2D2', 'DAC' = '#FFA488',
                           'BAP' = '#33FF33','AS' = '#FFFF37', 'CO' = '#FF5151',
                           'LCD' = '#1E90FF', 'HCD' = '#0000CD', 
@@ -127,33 +127,33 @@ draw_heatmap <- function(file=NULL,
                 clone = c('WT' = '#AAAAAA', 'L858R' = '#FF4500',
                           'Del19' = '#0066FF', 'YAP' = '#CA8EFF'))
   } else if(groups == "only_CO"){
-    data_mat <- mat %>% dplyr::select(all_of(name_df$group_name[only_CO]))
+    data_mat <- mat %>% dplyr::select(all_of(name_df$abbreviate[only_CO]))
     ann <- list(agent = c('BAP' = '#33FF33','CO' = '#FF5151', 'CO_BAP' = '#CC0000'),
                 clone = c('WT' = '#AAAAAA', 'L858R' = '#FF4500',
                           'Del19' = '#0066FF', 'YAP' = '#CA8EFF'))
   } else if(groups == "only_AS"){
-    data_mat <- mat %>% dplyr::select(all_of(name_df$group_name[only_AS]))
+    data_mat <- mat %>% dplyr::select(all_of(name_df$abbreviate[only_AS]))
     ann <- list(agent = c('BAP' = '#33FF33', 'AS' = '#FFFF37', 'AS_BAP' = '#FFDC35'),
                 clone = c('WT' = '#AAAAAA', 'L858R' = '#FF4500',
                           'Del19' = '#0066FF', 'YAP' = '#CA8EFF'))
   } else if(groups == "only_LCD"){
-    data_mat <- mat %>% dplyr::select(all_of(name_df$group_name[only_LCD]))
+    data_mat <- mat %>% dplyr::select(all_of(name_df$abbreviate[only_LCD]))
     ann <- list(agent = c('BAP' = '#33FF33', 'LCD' = '#1E90FF',  'LCD_BAP' = '#0088A8'),
                 clone = c('WT' = '#AAAAAA', 'L858R' = '#FF4500',
                           'Del19' = '#0066FF', 'YAP' = '#CA8EFF'))
   } else if(groups == "only_HCD"){
-    data_mat <- mat %>% dplyr::select(name_df$group_name[only_HCD])
+    data_mat <- mat %>% dplyr::select(name_df$abbreviate[only_HCD])
     ann <- list(agent = c('BAP' = '#33FF33','HCD' = '#0000CD', 'HCD_BAP' = '#000000'),
                 clone = c('WT' = '#AAAAAA', 'L858R' = '#FF4500',
                           'Del19' = '#0066FF', 'YAP' = '#CA8EFF'))
   } else if(groups == "only_CD"){
-    data_mat <- mat %>% dplyr::select(all_of(name_df$group_name[only_CD]))
+    data_mat <- mat %>% dplyr::select(all_of(name_df$abbreviate[only_CD]))
     ann <- list(agent = c('BAP' = '#33FF33','LCD' = '#1E90FF', 'HCD' = '#0000CD',
                           'LCD_BAP' = '#0088A8', 'HCD_BAP' = '#000000'),
                 clone = c('WT' = '#AAAAAA', 'L858R' = '#FF4500',
                           'Del19' = '#0066FF', 'YAP' = '#CA8EFF'))
   } else if(groups == "CON"){
-    data_mat <- mat %>% dplyr::select(all_of(name_df$group_name[CON]))
+    data_mat <- mat %>% dplyr::select(all_of(name_df$abbreviate[CON]))
     ann <- list(agent = c('CON' = '#E0E0E0', 'DMS' = '#ADADAD'),
                 clone = c('WT' = '#AAAAAA', 'L858R' = '#FF4500',
                           'Del19' = '#0066FF', 'YAP' = '#CA8EFF'))
@@ -173,13 +173,13 @@ draw_heatmap <- function(file=NULL,
   
   # agent name
   agent <- factor (
-    str_replace_all(col, c("ip_W_V_S_|ip_L_V_S_|ip_D_V_S_|ip_Y_V_S_"='')),
+    str_replace_all(col, c("W_|L_|D_|Y_"='')),
     levels=c('CON','DMS',"AZA","DAC","BAP",'AS',"CO","LCD","HCD",
              "AS_BAP","CO_BAP","LCD_BAP","HCD_BAP"))
   
   # clone name
   clone <- factor( 
-    str_replace_all(str_sub(col, 4,4), c("W" = "WT", "L" = "L858R", 
+    str_replace_all(str_sub(col, 1,1), c("W" = "WT", "L" = "L858R", 
                                          "D" = "Del19", "Y" = "YAP")),
     levels=c('WT','L858R',"Del19","YAP"))
   
@@ -224,14 +224,14 @@ draw_from_list <- function(list,
   if(id=="ENSEMBL"){
     list <- list  
     if(filter==F){
-      mat <- mycount_df %>%
-        mutate(.,ENSEMBL=rownames(mycount_df)) %>% 
-        filter(.,rownames(mycount_df) %in% list)
+      mat <- mylogCPM %>%
+        mutate(.,ENSEMBL=rownames(mylogCPM)) %>% 
+        filter(.,rownames(mylogCPM) %in% list)
     } else{
-      mat <- mycount_df %>%
-        mutate(.,ENSEMBL=rownames(mycount_df)) %>% 
+      mat <- mylogCPM %>%
+        mutate(.,ENSEMBL=rownames(mylogCPM)) %>% 
         left_join(.,gene_df, by="ENSEMBL") %>% 
-        filter(.,rownames(mycount_df) %in% list,
+        filter(.,rownames(mylogCPM) %in% list,
                !(SYMBOL%in% c("havana","ensembl_havana","havana_tagene"))) %>% 
         group_by(SYMBOL) %>%
         summarize(across(where(is.numeric), sum)) %>% na.omit() %>%  
@@ -239,8 +239,8 @@ draw_from_list <- function(list,
     }
   }else if(id=="SYMBOL"){
     list <- list  
-    mat <- mycount_df %>% 
-      mutate(.,ENSEMBL=rownames(mycount_df)) %>% 
+    mat <- mylogCPM %>% 
+      mutate(.,ENSEMBL=rownames(mylogCPM)) %>% 
       left_join(.,gene_df, by="ENSEMBL") %>% 
       group_by(SYMBOL) %>%
       summarize(across(where(is.numeric), sum)) %>% 
@@ -256,33 +256,33 @@ draw_from_list <- function(list,
   
   # select groups
   if(groups == "AS"){
-    data_mat <- mat %>% dplyr::select(all_of(name_df$group_name[AS]))
+    data_mat <- mat %>% dplyr::select(all_of(name_df$abbreviate[AS]))
     ann <- list(agent = c('CON' = '#E0E0E0', 'DMS' = '#ADADAD', 'BAP' = '#33FF33',
                           'AS' = '#FFFF37', 'AS_BAP' = '#FFDC35'),
                 clone = c('WT' = '#AAAAAA', 'L858R' = '#FF4500',
                           'Del19' = '#0066FF', 'YAP' = '#CA8EFF'))
   } else if(groups == "CO"){
-    data_mat <- mat %>% dplyr::select(all_of(name_df$group_name[CO]))
+    data_mat <- mat %>% dplyr::select(all_of(name_df$abbreviate[CO]))
     ann <- list(agent = c('CON' = '#E0E0E0', 'DMS' = '#ADADAD', 'BAP' = '#33FF33',
                           'CO' = '#FF5151', 'CO_BAP' = '#CC0000'),
                 clone = c('WT' = '#AAAAAA', 'L858R' = '#FF4500',
                           'Del19' = '#0066FF', 'YAP' = '#CA8EFF'))
   } else if(groups == "CD"){
-    data_mat <- mat %>% dplyr::select(all_of(name_df$group_name[CD]))
+    data_mat <- mat %>% dplyr::select(all_of(name_df$abbreviate[CD]))
     ann <- list(agent = c('CON' = '#E0E0E0', 'DMS' = '#ADADAD', 'BAP' = '#33FF33',
                           'LCD' = '#1E90FF', 'HCD' = '#0000CD', 
                           'LCD_BAP' = '#0088A8', 'HCD_BAP' = '#000000'),
                 clone = c('WT' = '#AAAAAA', 'L858R' = '#FF4500',
                           'Del19' = '#0066FF', 'YAP' = '#CA8EFF'))
   } else if(groups == "BAP"){
-    data_mat <- mat %>% dplyr::select(all_of(name_df$group_name[BAP]))
+    data_mat <- mat %>% dplyr::select(all_of(name_df$abbreviate[BAP]))
     ann <- list(agent = c('CON' = '#E0E0E0', 'DMS' = '#ADADAD', 'BAP' = '#33FF33',
                           'AS_BAP' = '#FFDC35', 'CO_BAP' = '#CC0000',
                           'LCD_BAP' = '#0088A8', 'HCD_BAP' = '#000000'),
                 clone = c('WT' = '#AAAAAA', 'L858R' = '#FF4500',
                           'Del19' = '#0066FF', 'YAP' = '#CA8EFF'))
   } else if(groups == "ALL"){
-    data_mat <- mat %>% dplyr::select(all_of(name_df$group_name))
+    data_mat <- mat %>% dplyr::select(all_of(name_df$abbreviate))
     ann <- list(agent = c('CON' = '#E0E0E0', 'DMS' = '#ADADAD', 'AZA' = '#FFD2D2', 'DAC' = '#FFA488',
                           'BAP' = '#33FF33','AS' = '#FFFF37', 'CO' = '#FF5151',
                           'LCD' = '#1E90FF', 'HCD' = '#0000CD', 
@@ -291,33 +291,33 @@ draw_from_list <- function(list,
                 clone = c('WT' = '#AAAAAA', 'L858R' = '#FF4500',
                           'Del19' = '#0066FF', 'YAP' = '#CA8EFF'))
   } else if(groups == "only_CO"){
-    data_mat <- mat %>% dplyr::select(all_of(name_df$group_name[only_CO]))
+    data_mat <- mat %>% dplyr::select(all_of(name_df$abbreviate[only_CO]))
     ann <- list(agent = c('BAP' = '#33FF33','CO' = '#FF5151', 'CO_BAP' = '#CC0000'),
                 clone = c('WT' = '#AAAAAA', 'L858R' = '#FF4500',
                           'Del19' = '#0066FF', 'YAP' = '#CA8EFF'))
   } else if(groups == "only_AS"){
-    data_mat <- mat %>% dplyr::select(all_of(name_df$group_name[only_AS]))
+    data_mat <- mat %>% dplyr::select(all_of(name_df$abbreviate[only_AS]))
     ann <- list(agent = c('BAP' = '#33FF33', 'AS' = '#FFFF37', 'AS_BAP' = '#FFDC35'),
                 clone = c('WT' = '#AAAAAA', 'L858R' = '#FF4500',
                           'Del19' = '#0066FF', 'YAP' = '#CA8EFF'))
   } else if(groups == "only_LCD"){
-    data_mat <- mat %>% dplyr::select(all_of(name_df$group_name[only_LCD]))
+    data_mat <- mat %>% dplyr::select(all_of(name_df$abbreviate[only_LCD]))
     ann <- list(agent = c('BAP' = '#33FF33', 'LCD' = '#1E90FF',  'LCD_BAP' = '#0088A8'),
                 clone = c('WT' = '#AAAAAA', 'L858R' = '#FF4500',
                           'Del19' = '#0066FF', 'YAP' = '#CA8EFF'))
   } else if(groups == "only_HCD"){
-    data_mat <- mat %>% dplyr::select(name_df$group_name[only_HCD])
+    data_mat <- mat %>% dplyr::select(name_df$abbreviate[only_HCD])
     ann <- list(agent = c('BAP' = '#33FF33','HCD' = '#0000CD', 'HCD_BAP' = '#000000'),
                 clone = c('WT' = '#AAAAAA', 'L858R' = '#FF4500',
                           'Del19' = '#0066FF', 'YAP' = '#CA8EFF'))
   } else if(groups == "only_CD"){
-    data_mat <- mat %>% dplyr::select(all_of(name_df$group_name[only_CD]))
+    data_mat <- mat %>% dplyr::select(all_of(name_df$abbreviate[only_CD]))
     ann <- list(agent = c('BAP' = '#33FF33','LCD' = '#1E90FF', 'HCD' = '#0000CD',
                           'LCD_BAP' = '#0088A8', 'HCD_BAP' = '#000000'),
                 clone = c('WT' = '#AAAAAA', 'L858R' = '#FF4500',
                           'Del19' = '#0066FF', 'YAP' = '#CA8EFF'))
   } else if(groups == "CON"){
-    data_mat <- mat %>% dplyr::select(all_of(name_df$group_name[CON]))
+    data_mat <- mat %>% dplyr::select(all_of(name_df$abbreviate[CON]))
     ann <- list(agent = c('CON' = '#E0E0E0', 'DMS' = '#ADADAD'),
                 clone = c('WT' = '#AAAAAA', 'L858R' = '#FF4500',
                           'Del19' = '#0066FF', 'YAP' = '#CA8EFF'))
@@ -339,13 +339,13 @@ draw_from_list <- function(list,
   
   # agent name
   agent <- factor (
-    str_replace_all(col, c("ip_W_V_S_|ip_L_V_S_|ip_D_V_S_|ip_Y_V_S_"='')),
+    str_replace_all(col, c("W_|L_|D_|Y_"='')),
     levels=c('CON','DMS',"AZA","DAC","BAP",'AS',"CO","LCD","HCD",
              "AS_BAP","CO_BAP","LCD_BAP","HCD_BAP"))
   
   # clone name
   clone <- factor( 
-    str_replace_all(str_sub(col, 4,4), c("W" = "WT", "L" = "L858R", 
+    str_replace_all(str_sub(col, 1,1), c("W" = "WT", "L" = "L858R", 
                                          "D" = "Del19", "Y" = "YAP")),
     levels=c('WT','L858R',"Del19","YAP"))
   
@@ -784,10 +784,10 @@ run_reactome <- function(file_name, dir="up",log_crit=1,
   return(de_pathway)
 }
 # get_p -------------------------------------------------------------------
-get_p <- function(x, group_name, top=0, p_value_cutoff = 0.01){
+get_p <- function(x, abbreviate, top=0, p_value_cutoff = 0.01){
   pvalue <- x@result %>% .[,c("Description","pvalue")] %>% 
     filter(pvalue < p_value_cutoff) %>% 
-    setNames(c("Description",group_name))
+    setNames(c("Description",abbreviate))
   if(top != 0){
     pvalue <- pvalue %>% head(top) 
   }
@@ -795,11 +795,11 @@ get_p <- function(x, group_name, top=0, p_value_cutoff = 0.01){
 }
 
 # plot_heatmap ------------------------------------------------------------
-plot_heatmap <- function(file_list, group_names, analysis, dir="up",
+plot_heatmap <- function(file_list, abbreviates, analysis, dir="up",
                          col_title="", row_title="",top=20) {
   # 檢查參數是否匹配
-  if (length(file_list) != length(group_names)) {
-    stop("file_list and group_names must have the same length")
+  if (length(file_list) != length(abbreviates)) {
+    stop("file_list and abbreviates must have the same length")
   }
   if (!(analysis %in% c("kegg", "reactome"))) {
     stop("Invalid type. Allowed values are 'kegg' or 'reactome'.")
@@ -810,7 +810,7 @@ plot_heatmap <- function(file_list, group_names, analysis, dir="up",
   } else{
     dfs <- lapply(file_list, function(file) run_reactome(file, log_crit = 1, dir = dir))
   }
-  processed_dfs <- mapply(get_p, dfs, group_name = group_names, SIMPLIFY = FALSE)
+  processed_dfs <- mapply(get_p, dfs, abbreviate = abbreviates, SIMPLIFY = FALSE)
   
   # 合併所有數據框
   combined_df <- Reduce(function(x, y) full_join(x, y, by = "Description"), processed_dfs) %>% 
@@ -1142,7 +1142,7 @@ plot_MD <- function(file_name, title="", logFC_criteria = 1, only_DE=T,
   }
   ### MD plot
   if(plot_type==1){
-    message("plotting MD plot")
+    cat(" -> plotting MD plot\n")
     p <- ggplot(df, aes(x = log(Average_expression), y = logFC, color = color)) +
       geom_point() +
       scale_colour_manual(values = c("1" = "red", "2" = "royalblue3", "3" = "grey")) +
@@ -1154,7 +1154,7 @@ plot_MD <- function(file_name, title="", logFC_criteria = 1, only_DE=T,
       ggtitle(title) 
   } else{
     df <- df %>% left_join(muta_rate,by = "ID")
-    message("plotting logFC and TCGA-mutation-rate plot")
+    cat(" -> plotting logFC and TCGA-mutation-rate plot\n")
     p <- ggplot(df, aes(x = `mutation_ratio(%)`, y = logFC, color = color))  +
       geom_point() +
       scale_colour_manual(values = c("1" = "red", "2" = "royalblue3", "3" = "grey")) +
@@ -1276,7 +1276,7 @@ draw_bar <- function(gene, group="ALL"){
 
 
 # draw_survival -----------------------------------------------------------
-draw_survival <- function(gene){
+draw_muta_survival <- function(gene){
   mutation_samples <- subset(maf_object@data, Hugo_Symbol == gene)$Tumor_Sample_Barcode
   # 提取了樣本ID的前12個字符，用於後續臨床樣本配對
   mutation_samples_short <- substr(mutation_samples, 1, 12)
@@ -1293,6 +1293,34 @@ draw_survival <- function(gene){
     width=10,
     legend = gene, 
     filename = paste0("output/",gene,"_survival.pdf")
+  )
+}
+
+# draw_TCGA_survival ------------------------------------------------------
+draw_TCGA_survival <- function(gene, population = ALL){
+  if(population=="ALL"){
+    tcga_count <- tcga_count
+  } else if(population=="female"){
+    list <- clin.LUAD %>% filter(gender=="female") %>% pull(submitter_id)
+    tcga_count <- tcga_count %>% .[,(substr(colnames(tcga_count), 1, 12) %in% list)]
+  } else if(population=="asian"){
+    list <- clin.LUAD %>% filter(race=="asian") %>% pull(submitter_id)
+    tcga_count <- tcga_count %>% .[,(substr(colnames(.), 1, 12) %in% list)]
+  }
+  exp <- tcga_count[rownames(tcga_count) == gene, ] %>% t() %>% 
+    as.data.frame() %>% setNames("gene_expression") %>% 
+    mutate(ID=substr(rownames(.), 1, 12)) %>% 
+    left_join(clin.LUAD, by = c("ID" = "submitter_id")) %>% 
+    mutate(gene_exp_level = ifelse(gene_expression >= median(.[["gene_expression"]]), "high","low"))
+  
+  TCGAanalyze_survival(
+    data = exp,
+    clusterCol = "gene_exp_level",
+    main = paste("TCGA",population),
+    height = 10,
+    width=10,
+    legend = gene,
+    filename = paste("output/",gene,"survival.pdf") 
   )
 }
 
@@ -1361,7 +1389,8 @@ draw_TCGA_boxplot <- function(gene){
 }
 
 # draw_cell_boxplot --------------------------------------------------------
-draw_cell_boxplot <- function(gene=NULL, by=NULL, sig=NULL, top=50, title=NULL){
+draw_cell_boxplot <- function(gene=NULL, by=NULL, sig=NULL, top=50, 
+                              title=NULL){
   if(is.null(sig)){
     if(!(by %in% c("Gender","Smoking_Status","Stage","EGFR_Status"))){
       stop("error: 'by' must be 'Gender','Smoking_Status','Stage','EGFR_Status'")
@@ -1487,16 +1516,16 @@ draw_Spearman_bar <- function(sig_num=NULL,group="ALL",top=50,count_df="my"){
   }
   
   # 定义组别名称列表
-  group_names <- colnames(filtered_counts)
+  abbreviates <- colnames(filtered_counts)
   
   # 初始化存储相关系数的矩阵
-  spearman_corr_matrix <- matrix(nrow = length(group_names), ncol = 1)
-  rownames(spearman_corr_matrix) <- group_names
+  spearman_corr_matrix <- matrix(nrow = length(abbreviates), ncol = 1)
+  rownames(spearman_corr_matrix) <- abbreviates
   colnames(spearman_corr_matrix) <- "signature"
   
   # 计算组别之间的Spearman相关系数
-  for (i in 1:length(group_names)) {
-    group2 <- filtered_counts[, group_names[i]]
+  for (i in 1:length(abbreviates)) {
+    group2 <- filtered_counts[, abbreviates[i]]
     spearman_corr_matrix[i, 1] <- compute_spearman(group1, group2)
   }
   
