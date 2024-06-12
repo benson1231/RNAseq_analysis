@@ -20,8 +20,12 @@ abb_raw_count <- raw_count_df %>%
   as.matrix()
 
 ### filter CPM --------------------------------------------------------------
-raw_CPM <- edgeR::cpm(abb_raw_count, log = F)
+### Normalization
+raw_obj <- edgeR::DGEList(abb_raw_count)
+raw_obj <- edgeR::calcNormFactors(raw_obj, method = "TMM")
+raw_CPM <- edgeR::cpm(raw_obj, log = F, normalized.lib.sizes = T)
 # Have a look at the output
+head(raw_obj$samples)
 head(raw_CPM)
 # Which values in raw_CPM are greater than 0.5?
 thresh <- raw_CPM > 0.5
@@ -44,7 +48,7 @@ plot(raw_CPM[,3],abb_raw_count[,3],ylim=c(0,50),xlim=c(0,3),xlab = "CPM",ylab="r
 abline(v=0.5)
 
 ### density plot before CPM-filtered
-raw_logCPM <- edgeR::cpm(abb_raw_count, log = T)
+raw_logCPM <- edgeR::cpm(raw_obj, log = T)
 col_sample <- c(RColorBrewer::brewer.pal(n = 8, "Set1"), RColorBrewer::brewer.pal(n = 8, "Set2"))
 plot(density(raw_logCPM[,1]), col = col_sample[1], lwd = 2, las =1,
      xlab = "logCPM", main = "Before filtering")
@@ -53,9 +57,10 @@ for (i in seq(2, ncol(raw_logCPM))){
 }
 
 ### density plot after CPM-filtered
-unnor_Obj <- edgeR::DGEList(counts.keep)
-unnor_Obj$samples
-filtered_logCPM <- edgeR::cpm(unnor_Obj, log = T)
+filtered_Obj <- edgeR::DGEList(counts.keep)
+filtered_Obj<- edgeR::calcNormFactors(filtered_Obj, method = "TMM")
+head(filtered_Obj$samples)
+filtered_logCPM <- edgeR::cpm(filtered_Obj, log = T)
 col_sample <- c(RColorBrewer::brewer.pal(n = 8, "Set1"), RColorBrewer::brewer.pal(n = 8, "Set2"))
 plot(density(filtered_logCPM[,1]), col = col_sample[1], lwd = 2, las =1,
      xlab = "logCPM", main = "Before filtering")
@@ -64,50 +69,25 @@ for (i in seq(2, ncol(filtered_logCPM))){
 }
 
 
-### normalization -----------------------------------------------------------
-head(unnor_Obj$samples)
-# library size
-barplot(unnor_Obj$samples$lib.size, names=name_df$abbreviate, las=2, 
+### library size -----------------------------------------------------------
+barplot(raw_obj$samples$lib.size, names=name_df$abbreviate, las=2, 
         ylim = c(0, 80000000), cex.names = 0.8)
 title("Barplot of library sizes of 52 samples")
 
-### normalized
-nor_Obj<- edgeR::calcNormFactors(unnor_Obj, method = "TMM")
-head(nor_Obj$samples)
-
 ### get log2CPM
-mylogCPM <- edgeR::cpm(nor_Obj,log=TRUE,normalized.lib.sizes = T)
+head(filtered_Obj$samples)
+mylogCPM <- edgeR::cpm(filtered_Obj,log=TRUE,normalized.lib.sizes = T)
 dim(mylogCPM)
 head(mylogCPM)
 # saveRDS(mylogCPM,"mylogCPM.RDS")
 
 ### get CPM
-myCPM <- edgeR::cpm(nor_Obj,log=FALSE,normalized.lib.sizes = T)
+myCPM <- edgeR::cpm(filtered_Obj,log=FALSE,normalized.lib.sizes = T)
 dim(myCPM)
 head(myCPM)
 # saveRDS(myCPM,"myCPM.RDS")
 
 ### boxplot of logCPM
-boxplot(mylogCPM, xlab="", ylab="Log2 counts per million",las=2,
-        main="Boxplots of logCPM (normalized)")
-abline(h=median(mylogCPM),col="blue")
-
-
-### compare with unnormalized --------------------------------------------
-head(unnor_Obj$samples)
-
-# Get log2 counts per million
-unnor_logCPM <- edgeR::cpm(unnor_Obj,log=TRUE)
-# Check distributions of samples using boxplots
-boxplot(unnor_logCPM, xlab="", ylab="Log2 counts per million",las=2,
-        cex.axis=0.7,main="Boxplots of logCPMs (unnormalized)")
-abline(h=median(unnor_logCPM),col="blue")
-
-# before and after
-par(mfrow=c(1,2))
-boxplot(unnor_logCPM, xlab="", ylab="Log2 counts per million",las=2,
-        cex.axis=0.7,main="Boxplots of logCPM (unnormalized)")
-abline(h=median(unnor_logCPM),col="blue")
 boxplot(mylogCPM, xlab="", ylab="Log2 counts per million",las=2,
         main="Boxplots of logCPM (normalized)")
 abline(h=median(mylogCPM),col="blue")
