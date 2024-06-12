@@ -35,24 +35,19 @@ clone = c('WT' = '#AAAAAA', 'L858R' = '#FF4500',
 gene_df <- "/Users/benson/Documents/project/RNA-seq1-3/data/anno_gene.RDS" %>% 
   readRDS() %>% dplyr::select(ENSEMBL,SYMBOL)
 # load log raw reads counts(logCPM)
-mylogCPM <- "/Users/benson/Documents/project/RNA-seq1-3/data/nor_logcounts.RDS" %>% 
-  readRDS() %>% as.data.frame() %>% dplyr::select(name_df$group_name) %>% 
-  setNames(name_df$abbreviate) 
-mylogCPM_SYMBOL <- "/Users/benson/Documents/project/RNA-seq1-3/data/nor_logcounts.RDS" %>% 
-  readRDS() %>% as.data.frame() %>% dplyr::select(name_df$group_name) %>% 
-  setNames(name_df$abbreviate) %>% rownames_to_column("ENSEMBL") %>% 
+mylogCPM <- "/Users/benson/Documents/project/RNA-seq1-3/data/mylogCPM.RDS" %>% 
+  readRDS() %>% as.data.frame()
+mylogCPM_gene <- "/Users/benson/Documents/project/RNA-seq1-3/data/mylogCPM.RDS" %>% 
+  readRDS() %>% as.data.frame() %>% rownames_to_column("ENSEMBL") %>% 
   left_join(gene_df,"ENSEMBL") %>% 
   group_by(SYMBOL) %>%
   summarize(across(where(is.numeric), sum)) %>% na.omit() %>% 
   column_to_rownames(., var = "SYMBOL")
 # load raw reads counts(CPM)
-mycount_df <- "/Users/benson/Documents/project/RNA-seq1-3/data/nor_counts.RDS" %>% 
+mycount_df <- "/Users/benson/Documents/project/RNA-seq1-3/data/myCPM.RDS" %>%
   readRDS() %>% as.data.frame()
-# clear column name(abbreviate)
-abbr_count <- mycount_df %>% 
-  dplyr::select(name_df$group_name) %>% setNames(name_df$abbreviate)
 # row name from ENSEMBL to SYMBOL for decoupleR
-gene_count <- abbr_count %>% 
+gene_count <- mycount_df %>% 
   rownames_to_column("ENSEMBL") %>% 
   left_join(gene_df,"ENSEMBL") %>% 
   group_by(SYMBOL) %>%
@@ -82,7 +77,7 @@ p1 %v% p2
 
 ### 2-2.bar plot  -----------------------------------------------------------
 # bar plot of gene expression(CPM)
-draw_bar("RRAD", group = "ALL")
+draw_bar("SERPINE1", group = "ALL")
 
 ### 2-3.MD plot --------------------------------------------------------
 # log fold changes(differences, D) versus average log values(means, M)
