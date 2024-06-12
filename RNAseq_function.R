@@ -50,7 +50,7 @@ draw_heatmap <- function(file=NULL,
                          log_crit=3,
                          groups="ALL",
                          show_row_names = FALSE,
-                         log_scale=FALSE,
+                         log_scale=T,
                          row_km=T,
                          km=0,
                          return_cluster=F,
@@ -62,8 +62,14 @@ draw_heatmap <- function(file=NULL,
     stop('"groups" must be "AS","CO","LCD","HCD","CD","BAP","only_AS","only_CO",
          "only_LCD","only_HCD","only_CD","CON" or "ALL".')
   }
+  
+  if(log_scale==T){
+    CPM_df <- mylogCPM
+  } else {
+    CPM_df <- myCPM
+  }
 
-  mat <- mylogCPM %>% as.data.frame() %>% rownames_to_column("ENSEMBL") %>% 
+  mat <- CPM_df %>% as.data.frame() %>% rownames_to_column("ENSEMBL") %>% 
     left_join(.,gene_df, by="ENSEMBL") %>% 
     group_by(SYMBOL) %>%
     summarize(across(where(is.numeric), sum)) %>% 
@@ -161,19 +167,14 @@ draw_heatmap <- function(file=NULL,
     return(NULL)
   }
   
-  if(log_scale==TRUE){
-    mat_scale <- data_mat %>% log2() %>% 
-      t() %>% scale(scale = T) %>% t() %>% as.matrix() %>% na.omit()
-  }else{
-    mat_scale <- data_mat %>% t() %>% scale(scale = T) %>% t() %>% as.matrix() %>% na.omit()
-  }
+  mat_scale <- data_mat %>% t() %>% scale(scale = T) %>% t() %>% as.matrix() %>% na.omit()
   
   ### heat-map argument
   col <- colnames(mat_scale)
   
   # agent name
   agent <- factor (
-    str_replace_all(col, c("W_|L_|D_|Y_"='')),
+    str_replace_all(col, c("^W_|^L_|^D_|^Y_"='')),
     levels=c('CON','DMS',"AZA","DAC","BAP",'AS',"CO","LCD","HCD",
              "AS_BAP","CO_BAP","LCD_BAP","HCD_BAP"))
   
@@ -210,7 +211,7 @@ draw_from_list <- function(list,
                            title="",
                            show_row_names = TRUE, # ENSEMBL/SYMBOL
                            label_num=F,
-                           log_scale=FALSE,
+                           log_scale=T,
                            col_cluster=FALSE,
                            row_km = 0,
                            filter=T
@@ -220,18 +221,23 @@ draw_from_list <- function(list,
     stop('"groups" must be "AS","CO","LCD","HCD","CD","BAP","only_AS","only_CO",
          "only_LCD","only_HCD","only_CD","CON" or "ALL".')
   }
+  if(log_scale==T){
+    CPM_df <- mylogCPM %>% as.data.frame()
+  } else {
+    CPM_df <- myCPM %>% as.data.frame()
+  }
   cat(c(" -> input list with",length(list),"genes","\n"))
   if(id=="ENSEMBL"){
     list <- list  
     if(filter==F){
-      mat <- mylogCPM %>%
-        mutate(.,ENSEMBL=rownames(mylogCPM)) %>% 
-        filter(.,rownames(mylogCPM) %in% list)
+      mat <- CPM_df %>%
+        mutate(.,ENSEMBL=rownames(CPM_df)) %>% 
+        filter(.,rownames(CPM_df) %in% list)
     } else{
-      mat <- mylogCPM %>%
-        mutate(.,ENSEMBL=rownames(mylogCPM)) %>% 
+      mat <- CPM_df %>%
+        mutate(.,ENSEMBL=rownames(CPM_df)) %>% 
         left_join(.,gene_df, by="ENSEMBL") %>% 
-        filter(.,rownames(mylogCPM) %in% list,
+        filter(.,rownames(CPM_df) %in% list,
                !(SYMBOL%in% c("havana","ensembl_havana","havana_tagene"))) %>% 
         group_by(SYMBOL) %>%
         summarize(across(where(is.numeric), sum)) %>% na.omit() %>%  
@@ -239,8 +245,8 @@ draw_from_list <- function(list,
     }
   }else if(id=="SYMBOL"){
     list <- list  
-    mat <- mylogCPM %>% 
-      mutate(.,ENSEMBL=rownames(mylogCPM)) %>% 
+    mat <- CPM_df %>% 
+      mutate(.,ENSEMBL=rownames(CPM_df)) %>% 
       left_join(.,gene_df, by="ENSEMBL") %>% 
       group_by(SYMBOL) %>%
       summarize(across(where(is.numeric), sum)) %>% 
@@ -326,11 +332,7 @@ draw_from_list <- function(list,
   }
   
   # scaling
-  if(log_scale==TRUE){
-    mat_scale <- data_mat %>% log2() %>%  t() %>% scale() %>% t() %>% as.matrix() %>% na.omit()
-  } else{
-    mat_scale <- data_mat  %>%  t() %>% scale() %>% t() %>% as.matrix() %>% na.omit()
-  }
+  mat_scale <- data_mat  %>%  t() %>% scale() %>% t() %>% as.matrix() %>% na.omit()
   
   # color
   col_fun = colorRamp2(c(-2, 0, 2), c("blue", "white", "red"))
@@ -338,8 +340,8 @@ draw_from_list <- function(list,
   col <- colnames(mat_scale)
   
   # agent name
-  agent <- factor (
-    str_replace_all(col, c("W_|L_|D_|Y_"='')),
+  agent <- factor(
+    str_replace_all(col, c("^W_|^L_|^D_|^Y_"='')),
     levels=c('CON','DMS',"AZA","DAC","BAP",'AS',"CO","LCD","HCD",
              "AS_BAP","CO_BAP","LCD_BAP","HCD_BAP"))
   
@@ -1238,7 +1240,7 @@ draw_bar <- function(gene, group="ALL"){
   if(!(group %in% c("AS","CO","CD","ALL","CON"))){
     stop(" -> group must be 'AS','CO','CD','ALL' or 'CON'.")
   }
-  mat <- abbr_count %>%
+  mat <- myCPM %>%
     rownames_to_column("ENSEMBL") %>% 
     left_join(.,gene_df, by="ENSEMBL") %>% 
     filter(.,SYMBOL == gene) %>% 
