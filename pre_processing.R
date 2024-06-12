@@ -24,7 +24,7 @@ raw_CPM <- edgeR::cpm(abb_raw_count, log = F)
 # Have a look at the output
 head(raw_CPM)
 # Which values in raw_CPM are greater than 0.5?
-thresh <- raw_CPM > 1
+thresh <- raw_CPM > 0.5
 # This produces a logical matrix with TRUEs and FALSEs
 head(thresh)
 
@@ -38,12 +38,12 @@ counts.keep <- abb_raw_count[keep,]
 summary(keep)
 dim(counts.keep)
 
-plot(raw_CPM[,1],abb_raw_count[,1])
+# take a look CPM vs raw_counts
 plot(raw_CPM[,3],abb_raw_count[,3],ylim=c(0,50),xlim=c(0,3),xlab = "CPM",ylab="raw_counts")
 # Add a vertical line at 0.5 CPM
 abline(v=0.5)
 
-### 原本的分布
+### density plot before CPM-filtered
 raw_logCPM <- edgeR::cpm(abb_raw_count, log = T)
 col_sample <- c(RColorBrewer::brewer.pal(n = 8, "Set1"), RColorBrewer::brewer.pal(n = 8, "Set2"))
 plot(density(raw_logCPM[,1]), col = col_sample[1], lwd = 2, las =1,
@@ -52,15 +52,15 @@ for (i in seq(2, ncol(raw_logCPM))){
   lines(density(raw_logCPM[,i]), col = col_sample[i], lwd = 2, las =2)
 }
 
-### 篩選後的分布
+### density plot after CPM-filtered
 unnor_Obj <- edgeR::DGEList(counts.keep)
 unnor_Obj$samples
 filtered_logCPM <- edgeR::cpm(unnor_Obj, log = T)
 col_sample <- c(RColorBrewer::brewer.pal(n = 8, "Set1"), RColorBrewer::brewer.pal(n = 8, "Set2"))
-plot(density(mylogCPM[,1]), col = col_sample[1], lwd = 2, las =1,
+plot(density(filtered_logCPM[,1]), col = col_sample[1], lwd = 2, las =1,
      xlab = "logCPM", main = "Before filtering")
-for (i in seq(2, ncol(mylogCPM))){
-  lines(density(mylogCPM[,i]), col = col_sample[i], lwd = 2, las =2)
+for (i in seq(2, ncol(filtered_logCPM))){
+  lines(density(filtered_logCPM[,i]), col = col_sample[i], lwd = 2, las =2)
 }
 
 
@@ -93,12 +93,11 @@ boxplot(mylogCPM, xlab="", ylab="Log2 counts per million",las=2,
 abline(h=median(mylogCPM),col="blue")
 
 
-### Unnormalized --------------------------------------------
+### compare with unnormalized --------------------------------------------
 head(unnor_Obj$samples)
 
 # Get log2 counts per million
 unnor_logCPM <- edgeR::cpm(unnor_Obj,log=TRUE)
-unnor_CPM <- edgeR::cpm(unnor_Obj,log=FALSE)
 # Check distributions of samples using boxplots
 boxplot(unnor_logCPM, xlab="", ylab="Log2 counts per million",las=2,
         cex.axis=0.7,main="Boxplots of logCPMs (unnormalized)")
