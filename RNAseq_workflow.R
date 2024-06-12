@@ -44,10 +44,10 @@ mylogCPM_gene <- "/Users/benson/Documents/project/RNA-seq1-3/data/mylogCPM.RDS" 
   summarize(across(where(is.numeric), sum)) %>% na.omit() %>% 
   column_to_rownames(., var = "SYMBOL")
 # load raw reads counts(CPM)
-mycount_df <- "/Users/benson/Documents/project/RNA-seq1-3/data/myCPM.RDS" %>%
+myCPM <- "/Users/benson/Documents/project/RNA-seq1-3/data/myCPM.RDS" %>%
   readRDS() %>% as.data.frame()
 # row name from ENSEMBL to SYMBOL for decoupleR
-gene_count <- mycount_df %>% 
+myCPM_gene <- mycount_df %>% 
   rownames_to_column("ENSEMBL") %>% 
   left_join(gene_df,"ENSEMBL") %>% 
   group_by(SYMBOL) %>%
@@ -59,7 +59,7 @@ muta_rate <- "/Users/benson/Documents/project/RNA-seq1-3/data/muta_rate.RDS" %>%
 
 ### 2-1.heatmap ----------------------------------------------------------
 gene_list <- c("ROX1","YAP1","LATS1","LATS2","TEAD")
-draw_from_list(gene_list, groups = "CO")
+draw_from_list(gene_list, groups = "ALL",log_scale = F)
 draw_from_list(gene_list, groups = "CD", col_cluster = T, row_cluster = T)
 # heatmap for lists
 list1 <- c("EGFR","ALK","ROS1","BRAF","MET","RET","Her2","KRAS","TP53","PTEN",
@@ -93,12 +93,12 @@ ComplexHeatmap::Heatmap(distance_matrix, name = "euclidean_dist")
 
 ### 3-2.highly variable genes ------------------------------------
 # preparing sample annotation
-abbr_sampleinfo <- data.frame(row = names(mylogCPM),
+sampleinfo <- data.frame(row = names(mylogCPM),
                               sample = names(mylogCPM), 
                               treatment = str_sub(names(mylogCPM), start=3),
                               cell = str_sub(names(mylogCPM), start=1,end=1)) %>%
   column_to_rownames('row') 
-head(abbr_sampleinfo)
+head(sampleinfo)
 # calculate variance
 var_genes <- apply(mylogCPM, 1, var)
 head(var_genes)
@@ -112,7 +112,7 @@ head(highly_variable_lcpm)
 # plot heatmap of 500 high variable genes
 draw_from_list(rownames(highly_variable_lcpm),groups = "ALL",id = "ENSEMBL",
                show_row_names = F, title = "Top 500 most variable genes across samples",
-               col_cluster = F,filter = F,row_km = 5)
+               col_cluster = F,filter = F)
 
 ### highly variable genes in gene SYMBOL
 var_genes <- apply(gene_count, 1, var) %>% sort(,decreasing = T)
@@ -120,36 +120,41 @@ head(var_genes, 50)
 
 ### 3-3.MDS ----------------------------------
 # Create a DGEList object
-DEG_obj <- edgeR::DGEList(abbr_count) 
+sampleinfo <- data.frame(row = names(mylogCPM),
+                         sample = names(mylogCPM), 
+                         treatment = str_sub(names(mylogCPM), start=3),
+                         cell = str_sub(names(mylogCPM), start=1,end=1)) %>%
+  column_to_rownames('row') 
+DEG_obj <- edgeR::DGEList(myCPM) 
 # set factor
-abbr_sampleinfo$sample <- factor(abbr_sampleinfo$sample)
-abbr_sampleinfo$treatment <- factor(abbr_sampleinfo$treatment)
-abbr_sampleinfo$cell <- factor(abbr_sampleinfo$cell)
-levels(abbr_sampleinfo$sample)
-levels(abbr_sampleinfo$treatment)
-levels(abbr_sampleinfo$cell)
+sampleinfo$sample <- factor(sampleinfo$sample)
+sampleinfo$treatment <- factor(sampleinfo$treatment)
+sampleinfo$cell <- factor(sampleinfo$cell)
+levels(sampleinfo$sample)
+levels(sampleinfo$treatment)
+levels(sampleinfo$cell)
 # color
-col.sample <- c("black")[abbr_sampleinfo$sample]
+col.sample <- c("black")[sampleinfo$sample]
 col.treatment <- c('#FFE66F','#FFDC35','#FFD2D2','#00DB00','#FF5151','#EA0000',
                    '#E0E0E0','#FF9797','#ADADAD','#005AB5','#000079','#0080FF',
-                   '#0000E3')[abbr_sampleinfo$treatment]
-col.cell <- c('#00DB00','#FF88C2','#0080FF', '#FF8000')[abbr_sampleinfo$cell]
+                   '#0000E3')[sampleinfo$treatment]
+col.cell <- c('#00DB00','#FF88C2','#0080FF', '#FF8000')[sampleinfo$cell]
 # treatment(carcinogen)
 plotMDS(DEG_obj,col=col.treatment,xlab = "Dimension 1",ylab = "Dimension 2")
 title("Carcinogen Treatment")
 legend("topleft",fill=c('#FFE66F','#FFDC35','#FFD2D2','#00DB00','#FF5151','#EA0000',
                         '#E0E0E0','#FF9797','#ADADAD','#005AB5','#000079','#0080FF',
                         '#0000E3'),
-       legend=levels(abbr_sampleinfo$treatment))
+       legend=levels(sampleinfo$treatment))
 # cell type
 plotMDS(DEG_obj,col=col.cell,xlab = "Dimension 1",ylab = "Dimension 2")
 title("Cell type")
-legend("topleft",fill=c('#00DB00','#FF88C2','#0080FF', '#FF8000'),legend=levels(abbr_sampleinfo$cell))
+legend("topleft",fill=c('#00DB00','#FF88C2','#0080FF', '#FF8000'),legend=levels(sampleinfo$cell))
 
 ### 3-4.3D PCA -------------------------------------------------------------
 library(plotly)
 # PCA
-count_mat <- t(abbr_count)
+count_mat <- t(myCPM)
 prin_comp <- prcomp(count_mat, rank. = 3)
 components <- prin_comp[["x"]]
 components <- data.frame(components)
@@ -300,7 +305,7 @@ ggplot(df_long, aes(x = gene, y = value, fill = category)) +
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1)) + 
   scale_fill_manual(values = clone)
-draw_bar(deg_count_df$gene[1])
+draw_bar(deg_count_df$gene[4])
 
 ### use variance to get highly variable genes in each clone
 clone_var_genes <- deg_count_df %>% 
@@ -311,7 +316,7 @@ clone_var_genes <- deg_count_df %>%
   setNames("variance") %>% rownames_to_column("gene")
 deg_count_df <- deg_count_df %>% left_join(., clone_var_genes, by = "gene")
 head(deg_count_df, 10)
-draw_bar(clone_var_genes$gene[4])
+draw_bar(clone_var_genes$gene[2])
 
 # # DEG count df
 # deg_count <- data.frame(gene=enrich_de)
@@ -550,7 +555,7 @@ tf_candidate <- run_TF(file_name, title = abb(file_name),plot = F) %>%
   pull(source) %>% head(6)
 print(tf_candidate)
 ### TNI object
-rtni <- RTN::tni.constructor(expData = as.matrix(abbr_count), 
+rtni <- RTN::tni.constructor(expData = as.matrix(myCPM), 
                              regulatoryElements = tf_candidate, 
                              colAnnotation = colAnnotation, 
                              rowAnnotation = gene_df)
