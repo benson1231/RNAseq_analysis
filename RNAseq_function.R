@@ -651,7 +651,7 @@ get_df <- function(file,
       cat(c("<- error, check direction", "\n"))
       return(NULL)
     }
-    
+    df <- df %>% arrange(desc(abs(logFC)))
     return(df)
     
   } else {
@@ -1399,7 +1399,13 @@ draw_cell_boxplot <- function(gene=NULL, by=NULL, sig=NULL, top=50,
     }
     df <- cell_count %>% dplyr::filter(rownames(.)==gene) %>% t() %>%  
       as.data.frame() %>% 
-      setNames("count") %>% rownames_to_column("ID") %>% left_join(cell_info,"ID")
+      setNames("count") %>% rownames_to_column("ID") %>% left_join(cell_info,"ID") %>% 
+      mutate(Gender = factor(Gender, levels = c("Male", "Female"))) %>% 
+      mutate(Smoking_Status = factor(Smoking_Status, levels = c("Nonsmoke", "Ex-smoker","Current_Smoker"))) %>% 
+      mutate(Stage = factor(Stage, levels = c("stage I", "stage II","stage III","stage IV"))) %>%
+      mutate(EGFR_Status = factor(EGFR_Status, levels = c("WT", "L858R","exon19del","L858R.exon19del","others"))) %>% 
+      arrange(!!sym(by))
+    
     # 根據by參數設置因子
     df[[by]] <- as.factor(df[[by]])
     # 執行單因素ANOVA
@@ -1417,18 +1423,21 @@ draw_cell_boxplot <- function(gene=NULL, by=NULL, sig=NULL, top=50,
     p_values <- sapply(comparisons, function(comp) {
       tukey_result[[by]][comp, "p adj"]
     })
+    num_patient <- df %>%
+      group_by(!!sym(by)) %>%
+      summarise(count = n())
     
     max_counts <- df %>%
       group_by(!!sym(by)) %>%
       summarise(max_count = max(count))
-    # 創建包含 p 值的數據框
+    
     p_labels <- data.frame(
       Group = levels(df[[by]])[-1],
       p_value = round(p_values, 4)
     ) %>%
       rename(!!by := Group) %>% 
       left_join(max_counts, by = by) %>%
-      mutate(y_position = max_count + 0.5)
+      mutate(y_position = max_count + 0.5) %>% full_join(num_patient)
     
     ggplot(df, aes(x = !!sym(by), y = count)) +
       geom_boxplot() +
@@ -1442,6 +1451,9 @@ draw_cell_boxplot <- function(gene=NULL, by=NULL, sig=NULL, top=50,
                  linetype = 'solid', linewidth = 0.7) +
       geom_text(data = p_labels, aes(x = !!sym(by), y = y_position, 
                                      label = paste0("p = ", p_value)),
+                vjust = -0.5, color = "black") +
+      geom_text(data = p_labels, aes(x = !!sym(by), y = y_position + 0.5, 
+                                     label = paste0("n = ",count)),
                 vjust = -0.5, color = "black")
     
   } else{
@@ -1630,3 +1642,40 @@ draw_boxplot <- function(sig_num,group="ALL", top=50){
     scale_fill_manual(values = clone) +
     theme(axis.text.x = element_text(angle = 45, hjust = 1))
 }
+
+
+# draw_ppi ----------------------------------------------------------------
+draw_ppi <- function(file_num=NULL,top=50,dir="up"){
+  cat(c(" -> read file from",name_df$abbreviate[file_num],name_df$abbreviate[file_num+13],
+      name_df$abbreviate[file_num+26],name_df$abbreviate[file_num+39],"\n"))
+  w <- get_df(name_df$file_name[file_num], de = T, dir = dir) %>% head(top)
+  l <- get_df(name_df$file_name[file_num+13], de = T, dir = dir) %>% head(top)
+  d <- get_df(name_df$file_name[file_num+26], de = T, dir = dir) %>% head(top)
+  y <- get_df(name_df$file_name[file_num+39], de = T, dir = dir) %>% head(top)
+  
+  W <- string_db$map(w, "gene", removeUnmappedRows = TRUE) %>% mutate(WT=1) %>% distinct(gene, .keep_all = TRUE)
+  L <- string_db$map(l, "gene", removeUnmappedRows = TRUE) %>% mutate(L858R=1) %>% distinct(gene, .keep_all = TRUE)
+  D <- string_db$map(d, "gene", removeUnmappedRows = TRUE) %>% mutate(Del19=1) %>% distinct(gene, .keep_all = TRUE)
+  Y <- string_db$map(y, "gene", removeUnmappedRows = TRUE) %>% mutate(YAP=1) %>% distinct(gene, .keep_all = TRUE)
+  
+  data <- W %>% full_join(L ,by="STRING_id") %>% full_join(D, by="STRING_id") %>% full_join(Y, by="STRING_id") %>% 
+    mutate(logFC = 1) %>% 
+    replace_na(list(WT = 0, L858R = 0, Del19 = 0, YAP = 0)) %>% 
+    mutate(row_sum = rowSums(select(., WT,L858R,Del19,YAP)))  %>% 
+    mutate(color=ifelse(row_sum == 4, "orange" ,"white")) %>%
+    mutate(color=ifelse(row_sum == 2|3 , "yellow" ,color)) %>% 
+    mutate(color=ifelse(WT== 1 & row_sum == 1, "grey30" ,color)) %>% 
+    mutate(color=ifelse(L858R== 1 & row_sum == 1, "red" ,color)) %>% 
+    mutate(color=ifelse(Del19== 1 & row_sum == 1, "blue" ,color)) %>% 
+    mutate(color=ifelse(YAP== 1 & row_sum == 1, "#CA8EFF" ,color)) 
+  
+  hits <- data$STRING_id[1:200]
+  
+  # post payload information to the STRING server
+  payload_id <- string_db$post_payload(data$STRING_id,
+                                       colors=data$color)
+  # display a STRING network png with the "halo"
+  cat(" -> plotting")
+  string_db$plot_network(hits, payload_id=payload_id)
+}
+
