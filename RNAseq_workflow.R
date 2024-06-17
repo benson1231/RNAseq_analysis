@@ -22,6 +22,7 @@ setwd(wd)
 data_path <- "/Users/benson/Documents/raw_data/RNA-seq1-3/ST"
 output_dir <- "/Users/benson/Documents/project/RNA-seq1-3/output"
 name_df <- openxlsx::read.xlsx("/Users/benson/Documents/project/RNA-seq1-3/data/name.xlsx")
+treat_num <- c(3:13, 16:26, 29:39, 42:52)
 # color setting
 red_white_blue_colors <- c("blue", "white", "red")
 rwb_palette <- grDevices::colorRampPalette(red_white_blue_colors)
@@ -47,7 +48,7 @@ mylogCPM_gene <- "/Users/benson/Documents/project/RNA-seq1-3/data/mylogCPM.RDS" 
 myCPM <- "/Users/benson/Documents/project/RNA-seq1-3/data/myCPM.RDS" %>%
   readRDS() %>% as.data.frame()
 # row name from ENSEMBL to SYMBOL for decoupleR
-myCPM_gene <- mycount_df %>% 
+myCPM_gene <- myCPM %>% 
   rownames_to_column("ENSEMBL") %>% 
   left_join(gene_df,"ENSEMBL") %>% 
   group_by(SYMBOL) %>%
@@ -56,10 +57,17 @@ myCPM_gene <- mycount_df %>%
 # TCGA patients' mutation rate
 muta_rate <- "/Users/benson/Documents/project/RNA-seq1-3/data/muta_rate.RDS" %>% 
   readRDS()
+# preparing sample annotation
+sampleinfo <- data.frame(row = names(mylogCPM),
+                         sample = names(mylogCPM), 
+                         treatment = str_sub(names(mylogCPM), start=3),
+                         cell = str_sub(names(mylogCPM), start=1,end=1)) %>%
+  column_to_rownames('row') 
+head(sampleinfo)
 
 ### 2-1.heatmap ----------------------------------------------------------
-gene_list <- c("ROX1","YAP1","LATS1","LATS2","TEAD")
-draw_from_list(gene_list, groups = "ALL",log_scale = F)
+gene_list <- c("ROX1","YAP1","LATS1","LATS2","TEAD","CYP1A1")
+draw_from_list(gene_list, groups = "ALL",log_scale = T)
 draw_from_list(gene_list, groups = "CD", col_cluster = T, row_cluster = T)
 # heatmap for lists
 list1 <- c("EGFR","ALK","ROS1","BRAF","MET","RET","Her2","KRAS","TP53","PTEN",
@@ -77,7 +85,7 @@ p1 %v% p2
 
 ### 2-2.bar plot  -----------------------------------------------------------
 # bar plot of gene expression(CPM)
-draw_bar("SERPINE1", group = "ALL")
+draw_bar("LTB", group = "ALL")
 
 ### 2-3.MD plot --------------------------------------------------------
 # log fold changes(differences, D) versus average log values(means, M)
@@ -85,25 +93,18 @@ plot_MD("ip_L_V_S_AS_BAP_0_deg.xlsx", only_DE = T, plot_type = 1)
 # with non-significant genes(it may take while)
 plot_MD("ip_L_V_S_HCD_BAP_0_deg.xlsx")
 
-### 3-1.euclidean distance(use logCPM) ----------------------------
+### 3-1.euclidean distance ------------------------------------------
 euclidean_dist <- dist(t(mylogCPM), method = "euclidean")
 distance_matrix <- as.matrix(euclidean_dist) 
 # euclidean distance heatmap
 ComplexHeatmap::Heatmap(distance_matrix, name = "euclidean_dist")
 
 ### 3-2.highly variable genes ------------------------------------
-# preparing sample annotation
-sampleinfo <- data.frame(row = names(mylogCPM),
-                              sample = names(mylogCPM), 
-                              treatment = str_sub(names(mylogCPM), start=3),
-                              cell = str_sub(names(mylogCPM), start=1,end=1)) %>%
-  column_to_rownames('row') 
-head(sampleinfo)
 # calculate variance
-var_genes <- apply(mylogCPM, 1, var)
-head(var_genes)
+var_id <- apply(mylogCPM, 1, var)
+head(var_id)
 # Get the gene names for the top 500 most variable genes
-select_var <- names(sort(var_genes, decreasing=TRUE))[1:500]
+select_var <- names(sort(var_id, decreasing=TRUE))[1:500]
 head(select_var)
 # Subset logcounts matrix
 highly_variable_lcpm <- mylogCPM[select_var,] %>% as.matrix()
@@ -115,41 +116,53 @@ draw_from_list(rownames(highly_variable_lcpm),groups = "ALL",id = "ENSEMBL",
                col_cluster = F,filter = F)
 
 ### highly variable genes in gene SYMBOL
-var_genes <- apply(gene_count, 1, var) %>% sort(,decreasing = T)
+var_genes <- apply(myCPM_gene, 1, var) %>% sort(,decreasing = T)
 head(var_genes, 50)
+draw_bar(names(var_genes[10]))
 
 ### 3-3.MDS ----------------------------------
 # Create a DGEList object
-sampleinfo <- data.frame(row = names(mylogCPM),
-                         sample = names(mylogCPM), 
-                         treatment = str_sub(names(mylogCPM), start=3),
-                         cell = str_sub(names(mylogCPM), start=1,end=1)) %>%
-  column_to_rownames('row') 
 DEG_obj <- edgeR::DGEList(myCPM) 
 # set factor
-sampleinfo$sample <- factor(sampleinfo$sample)
-sampleinfo$treatment <- factor(sampleinfo$treatment)
-sampleinfo$cell <- factor(sampleinfo$cell)
+sampleinfo$sample <- factor(sampleinfo$sample, level = sampleinfo$sample)
+sampleinfo$treatment <- factor(sampleinfo$treatment, levels = sampleinfo$treatment[1:13])
+sampleinfo$cell <- factor(sampleinfo$cell, levels = c("W","L","D","Y"))
 levels(sampleinfo$sample)
 levels(sampleinfo$treatment)
 levels(sampleinfo$cell)
 # color
 col.sample <- c("black")[sampleinfo$sample]
-col.treatment <- c('#FFE66F','#FFDC35','#FFD2D2','#00DB00','#FF5151','#EA0000',
-                   '#E0E0E0','#FF9797','#ADADAD','#005AB5','#000079','#0080FF',
-                   '#0000E3')[sampleinfo$treatment]
-col.cell <- c('#00DB00','#FF88C2','#0080FF', '#FF8000')[sampleinfo$cell]
-# treatment(carcinogen)
-plotMDS(DEG_obj,col=col.treatment,xlab = "Dimension 1",ylab = "Dimension 2")
-title("Carcinogen Treatment")
-legend("topleft",fill=c('#FFE66F','#FFDC35','#FFD2D2','#00DB00','#FF5151','#EA0000',
-                        '#E0E0E0','#FF9797','#ADADAD','#005AB5','#000079','#0080FF',
-                        '#0000E3'),
-       legend=levels(sampleinfo$treatment))
+col.treatment <- c(col_CON, col_DMS, col_AZA, col_DAC, col_BAP, col_AS, col_CO, col_LCD,  
+                   col_HCD, col_AS_BAP, col_CO_BAP, col_LCD_BAP, col_HCD_BAP)[sampleinfo$treatment]
+col.cell <- c(col_W,col_L,col_D,col_Y)[sampleinfo$cell]
 # cell type
-plotMDS(DEG_obj,col=col.cell,xlab = "Dimension 1",ylab = "Dimension 2")
+par(mar = c(5, 4, 4, 8), xpd = TRUE)  # 縮小畫布
+plotMDS(DEG_obj,col=col.cell,xlab = "Dimension 1",ylab = "Dimension 2",
+        pch = 20, cex = 1.5)  # plotMDS will get logCPM before plotting
 title("Cell type")
-legend("topleft",fill=c('#00DB00','#FF88C2','#0080FF', '#FF8000'),legend=levels(sampleinfo$cell))
+legend("topright", inset = c(-0.18, 0), xpd = TRUE,
+       fill=c(col_W,col_L,col_D,col_Y), legend=levels(sampleinfo$cell))
+# treatment(carcinogen)
+par(mar = c(5, 4, 4, 8), xpd = TRUE)  # 縮小畫布
+plotMDS(DEG_obj,col=col.treatment,xlab = "Dimension 1",ylab = "Dimension 2",
+        pch = 20, cex = 1.5)  # plotMDS will get logCPM before plotting
+title("Carcinogen Treatment")
+legend("topright",inset = c(-0.28, 0), xpd = TRUE,
+       fill=c(col_CON, col_DMS, col_AZA, col_DAC, col_AS, col_CO, col_LCD,  
+              col_HCD, col_BAP, col_AS_BAP, col_CO_BAP, col_LCD_BAP, col_HCD_BAP), 
+       legend=levels(sampleinfo$treatment))
+### merge
+par(mar = c(5, 4, 4, 10), xpd = TRUE)  # 縮小畫布
+plotMDS(DEG_obj,col=col.treatment,xlab = "Dimension 1",ylab = "Dimension 2",
+        pch = pch_values, cex = 1.5)  # plotMDS will get logCPM before plotting
+title("Carcinogen Treatment")
+legend("topright",inset = c(-0.118, 0), xpd = TRUE,
+       pch=c(15,16,17,18), 
+       legend=levels(sampleinfo$cell))
+legend("topright",inset = c(-0.4, 0), xpd = TRUE,
+       fill=c(col_CON, col_DMS, col_AZA, col_DAC, col_AS, col_CO, col_LCD,  
+              col_HCD, col_BAP, col_AS_BAP, col_CO_BAP, col_LCD_BAP, col_HCD_BAP), 
+       legend=levels(sampleinfo$treatment))
 
 ### 3-4.3D PCA -------------------------------------------------------------
 library(plotly)
@@ -182,11 +195,10 @@ plot3D::scatter3D(components$PC1, components$PC2, components$PC3,
                   pch = 16,xlab = pc1,ylab = pc2,zlab=pc3)
 
 ### 4-1.DEG number in each group --------------------------------------------
-num <- c(3:13, 16:26, 29:39, 42:52)
 # get DEG number in each groups
 DEG_num <- data.frame(file = character(), up_regulation = numeric(),
                      down_regulation = numeric(), stringsAsFactors = FALSE)
-for (i in name_df$file_name[num]) {
+for (i in name_df$file_name[treat_num]) {
   # 讀取 Excel 文件
   data <- readxl::read_xlsx(file.path(data_path, i))
   # 過濾 M column > 1 的 row (up-regulation)
@@ -211,7 +223,7 @@ for (i in name_df$file_name[num]) {
 }
 # 查看结果
 head(DEG_num)
-DEG_num$group <- name_df$abbreviate[num]
+DEG_num$group <- name_df$abbreviate[treat_num]
 # 將數據轉成長格式
 DEG_num_long <- DEG_num %>%
   mutate(down_regulation = -down_regulation) %>%
@@ -232,11 +244,11 @@ ggplot(DEG_num_long, aes(x = group, y = count, fill = count_type)) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
 ### 4-2.get DEGs and plot in each groups ---------------------------------------
-top <- 100
+top <- 50
 logcrit <- 1
 # 初始化
 DEG_df <- data.frame(num = 1:top)
-for (i in name_df$file_name[num]) {
+for (i in name_df$file_name[treat_num]) {
   # 讀取 Excel 文件
   data <- readxl::read_xlsx(file.path(data_path, i))
   # 过滤 M 列大于 1 的行
@@ -332,7 +344,7 @@ draw_bar(clone_var_genes$gene[2])
 
 ### 4-3.get all DEG list ---------------------------------------------
 all_deg_list <- c()
-for(i in name_df$file_name[num]){
+for(i in name_df$file_name[treat_num]){
   # 讀取 Excel 文件
   data <- readxl::read_xlsx(file.path(data_path, i))
   # 过滤 M 列大于 1 的行
@@ -407,7 +419,7 @@ p1 %v% p2
 ### 8.ORA pathway in single group ----------------------------------------------
 ### enrichKEGG(KEGG pathway)
 keg_result <- run_keg_path(name_df$file_name[10], dir = "up",log_crit = 1)
-view(keg_result %>% as.data.frame() %>% rownames_to_column("new_ID"))
+# view(keg_result %>% as.data.frame() %>% rownames_to_column("new_ID"))
 # bar plot
 barplot(keg_result, showCategory=10, font.size = 9, x = "GeneRatio", label_format = 40,
         title = "")   # change
@@ -512,7 +524,7 @@ net <- "/Users/benson/Documents/project/RNA-seq1-3/data/net.RDS" %>% readRDS()
 net_TF <- "/Users/benson/Documents/project/RNA-seq1-3/data/net_TF.RDS" %>% readRDS()
 
 ### pathway 
-run_path_heatmap(gene_count)
+run_path_heatmap(myCPM_gene)
 # pathway for specific group
 file_name <- "ip_L_V_S_AS_BAP_0_deg.xlsx"   # change
 # pathway barplot
@@ -526,7 +538,7 @@ draw_from_list(list = path_top50, groups = "CD",
 plot_MD(file_name, list = path_top50, plot_type = 2)
 
 ### TFs 
-run_TF_heatmap(gene_count)
+run_TF_heatmap(myCPM_gene)
 # TFs for specific group
 file_name <- "ip_Y_V_S_HCD_BAP_0_deg.xlsx"   # change
 # TFs barplot
@@ -547,12 +559,22 @@ target_gene <- "ANKRD1"
 target_gene_TF <- net_TF %>% filter(target==target_gene) %>% pull(source)
 draw_from_list(c(target_gene_TF,target_gene),groups = "CD")
 
+### output
+# for(i in treat_num){
+#   run_TF(name_df$file_name[i], title = abb(name_df$file_name[i], type = "file")) %>% print()
+#   ggsave(paste0("output/",name_df$abbreviate[i],"/",name_df$abbreviate[i],"_TF_plot.png"))
+#   dev.off()
+# }
+
 ### 12.RTN for TFs GSEA ---------------------------------------------------------
 library(RTN)
 # column annotation and interesting TFs
 colAnnotation <- openxlsx::read.xlsx("/Users/benson/Documents/project/RNA-seq1-3/data/sampleinfo.xlsx",rowNames = T)
-tf_candidate <- run_TF(file_name, title = abb(file_name),plot = F) %>% 
-  pull(source) %>% head(6)
+file_number <- 10
+name_df$file_name[file_number]
+tf_candidate <- run_TF(name_df$file_name[file_number], 
+                       title = abb(name_df$file_name[file_number]),plot = F) %>% 
+  pull(source) %>% head(5)
 print(tf_candidate)
 ### TNI object
 rtni <- RTN::tni.constructor(expData = as.matrix(myCPM), 
@@ -564,7 +586,7 @@ rtni <- tni.permutation(rtni, nPermutations = 100)  # Please set nPermutations >
 rtni <- tni.bootstrap(rtni)
 rtni <- tni.dpi.filter(rtni)
 tni.regulon.summary(rtni)
-tni.regulon.summary(rtni, regulatoryElements = "JUN")
+# tni.regulon.summary(rtni, regulatoryElements = "JUN")
 regulons <- tni.get(rtni, what = "regulons.and.mode", idkey = "SYMBOL")
 head(regulons$JUN)
 
@@ -590,16 +612,21 @@ gsea1 <- tna.get(rtna, what="gsea1", ntop = -1)
 head(gsea1)
 # Plot GSEA results
 tna.plot.gsea1(rtna, labPheno="abs(log2 fold changes)", ntop = -1, 
-               filepath = "./output")
+               filepath = paste0("./output/",name_df$abbreviate[file_number]),
+               file=paste0(name_df$abbreviate[file_number],"_TF_all"))
 ### Run the GSEA-2T method
 rtna <- tna.gsea2(rtna, nPermutations = 100)  # Please set nPermutations >= 1000
 # Get GSEA-2T results
 gsea2 <- tna.get(rtna, what = "gsea2", ntop = -1)
 head(gsea2$differential)
 # Plot GSEA-2T results
-tna.plot.gsea2(rtna, labPheno="log2 fold changes", tfs="TP53",filepath = "./output")
-for (i in tf_candidate) {
-  tna.plot.gsea2(rtna, labPheno="log2 fold changes", tfs=i,filepath = "./output")
+# tna.plot.gsea2(rtna, labPheno="log2 fold changes", tfs="JUND",
+#                filepath = paste0("./output/",name_df$abbreviate[file_number]),
+#                file=paste0(name_df$abbreviate[file_number]))
+for (i in gsea2$differential$Regulon) {
+  tna.plot.gsea2(rtna, labPheno="log2 fold changes", tfs=i,
+                 filepath = paste0("./output/",name_df$abbreviate[file_number]),
+                 file=paste0(name_df$abbreviate[file_number]))
 }
 
 ### regulon activity heatmap 
@@ -793,7 +820,7 @@ cell_count$Median <- NULL
 
 # draw boxplot by 'Gender','Smoking Status','Stage' or 'EGFR_Status'
 gene <- names(enrich_de[1])
-gene <- "KRT80"
+gene <- "SERPINE1"
 print(gene)
 draw_cell_boxplot(gene = gene, by="EGFR_Status")
 draw_cell_boxplot(gene = gene, by="Stage")
@@ -817,6 +844,57 @@ draw_Spearman_bar(sig_num = 52, top = 10, count_df = "cell")
 ### signature
 draw_boxplot(sig_num = 10, group = "ALL", top = 20)
 
-# 19.hallmark in cancer ---------------------------------------------------
-hallmark_df <- read.csv("/Users/benson/Desktop/hallmark/W_AS_hallmark", sep = "\t")
+### 19.hallmark in cancer ---------------------------------------------------
+w <- read.csv(paste0("/Users/benson/Desktop/hallmark/","W_",group), sep = "\t")
+l <- read.csv(paste0("/Users/benson/Desktop/hallmark/","L_",group), sep = "\t")
+d <- read.csv(paste0("/Users/benson/Desktop/hallmark/","D_",group), sep = "\t")
+y <- read.csv(paste0("/Users/benson/Desktop/hallmark/","Y_",group), sep = "\t")
+
+# check list
+marker_list <- strsplit(l$Genes[2], ";")[[1]]
+draw_from_list(marker_list,groups = "CD")
+# hallmark p.adj
+draw_hallmark(group="HCD_BAP", dir="up", row_title="hallmarks of cancer")
+
+### 20.signature ------------------------------------------------------------
+CO_venn <- multi_venn(name_df$file_name[c(6,19,32,45)],dir = "up", title = "CO")
+sig_w_co <- CO_venn$item[1] %>% unlist()
+sig_l_co <- CO_venn$item[2] %>% unlist()
+sig_d_co <- CO_venn$item[3] %>% unlist()
+sig_y_co <- CO_venn$item[4] %>% unlist()
+
+sig <- sig_y_co
+by <- "EGFR_Status"
+df <- cell_count %>%  
+  as.data.frame() %>% 
+  rownames_to_column("gene") %>% 
+  filter(gene %in% sig) %>% 
+  column_to_rownames("gene")
+
+# 进行PCA
+pca_result <- prcomp(t(df), center = TRUE, scale. = TRUE)
+
+info <- cell_info %>% select(c("ID",all_of(by)))
+# 将PCA结果转换为数据框
+pca_df <- as.data.frame(pca_result$x) %>% as.data.frame() %>% 
+  rownames_to_column("ID") %>% 
+  left_join(info)
+
+# 绘制PCA散点图
+ggplot(pca_df, aes(x = PC1, y = PC2, color = !!sym(by))) +
+  geom_point(size = 2) +
+  labs(title = "PCA of Gene Expression Data", x = "PC1", y = "PC2") +
+  theme_minimal()
+
+
+### 21.PPI ---------------------------------------------------
+library(STRINGdb)
+string_db <- STRINGdb$new(version = "11.5", species = 9606, 
+                          score_threshold = 200, input_directory="")
+class(string_db)
+
+### PPI plot
+draw_ppi(file_num = 13,top = 50)
+
+
 
