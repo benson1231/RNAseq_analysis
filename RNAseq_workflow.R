@@ -28,8 +28,8 @@ red_white_blue_colors <- c("blue", "white", "red")
 rwb_palette <- grDevices::colorRampPalette(red_white_blue_colors)
 n_colors <- 10
 colors <- rwb_palette(n_colors)
-clone = c('WT' = '#AAAAAA', 'L858R' = '#FF4500',
-          'Del19' = '#0066FF', 'YAP' = '#CA8EFF')
+clone = c('WT' = col_W, 'L858R' = col_L,
+          'Del19' = col_D, 'YAP' = col_Y)
 
 ### 1-1.input raw_count data ----------------------------------------------------
 # load annotation data
@@ -89,7 +89,7 @@ draw_bar("LTB", group = "ALL")
 
 ### 2-3.MD plot --------------------------------------------------------
 # log fold changes(differences, D) versus average log values(means, M)
-plot_MD("ip_L_V_S_AS_BAP_0_deg.xlsx", only_DE = T, plot_type = 1)
+plot_MD("ip_Y_V_S_AS_0_deg.xlsx", only_DE = T, plot_type = 1,list = list)
 # with non-significant genes(it may take while)
 plot_MD("ip_L_V_S_HCD_BAP_0_deg.xlsx")
 
@@ -97,28 +97,40 @@ plot_MD("ip_L_V_S_HCD_BAP_0_deg.xlsx")
 euclidean_dist <- dist(t(mylogCPM), method = "euclidean")
 distance_matrix <- as.matrix(euclidean_dist) 
 # euclidean distance heatmap
-ComplexHeatmap::Heatmap(distance_matrix, name = "euclidean_dist")
+ComplexHeatmap::Heatmap(distance_matrix, name = "Euclidean\nDistance")
 
 ### 3-2.highly variable genes ------------------------------------
 # calculate variance
-var_id <- apply(mylogCPM, 1, var)
+myFC <- myCPM_gene
+myFC[, 3:8] <- myFC[, 3:8] / myFC[, 1]
+myFC[, 9:13] <- myFC[, 9:13] / myFC[, 2]
+myFC[, 16:21] <- myFC[, 16:21] / myFC[, 14]
+myFC[, 22:26] <- myFC[, 22:26] / myFC[, 15]
+myFC[, 29:34] <- myFC[, 29:34] / myFC[, 27]
+myFC[, 35:39] <- myFC[, 35:39] / myFC[, 28]
+myFC[, 42:47] <- myFC[, 42:47] / myFC[, 40]
+myFC[, 48:52] <- myFC[, 48:52] / myFC[, 41]
+myFC <- myFC[,-c(1,2,14,15,27,28,40,41)]
+var_id <- apply(myFC, 1, var)
 head(var_id)
 # Get the gene names for the top 500 most variable genes
 select_var <- names(sort(var_id, decreasing=TRUE))[1:500]
 head(select_var)
 # Subset logcounts matrix
-highly_variable_lcpm <- mylogCPM[select_var,] %>% as.matrix()
+highly_variable_lcpm <- myFC[select_var,] %>% as.matrix()
 dim(highly_variable_lcpm)
 head(highly_variable_lcpm)
 # plot heatmap of 500 high variable genes
-draw_from_list(rownames(highly_variable_lcpm),groups = "ALL",id = "ENSEMBL",
+draw_from_list(rownames(highly_variable_lcpm),groups = "ALL",id = "SYMBOL",
                show_row_names = F, title = "Top 500 most variable genes across samples",
-               col_cluster = F,filter = F)
+               col_cluster = T,filter = F)
 
 ### highly variable genes in gene SYMBOL
-var_genes <- apply(myCPM_gene, 1, var) %>% sort(,decreasing = T)
+var_genes <- apply(myFC, 1, var) %>% sort(,decreasing = T)
 head(var_genes, 50)
-draw_bar(names(var_genes[10]))
+draw_bar(names(var_genes[5]))
+draw_from_list(names(var_genes)[1:100],id = "SYMBOL",col_cluster = T,
+               title = "Top 100 most variable genes across samples")
 
 ### 3-3.MDS ----------------------------------
 # Create a DGEList object
@@ -132,27 +144,28 @@ levels(sampleinfo$treatment)
 levels(sampleinfo$cell)
 # color
 col.sample <- c("black")[sampleinfo$sample]
-col.treatment <- c(col_CON, col_DMS, col_AZA, col_DAC, col_BAP, col_AS, col_CO, col_LCD,  
-                   col_HCD, col_AS_BAP, col_CO_BAP, col_LCD_BAP, col_HCD_BAP)[sampleinfo$treatment]
+col.treatment <- c(col_CON, col_DMS, col_AZA, col_DAC, col_AS, col_CO, col_LCD, col_HCD, col_BAP,
+                   col_AS_BAP, col_CO_BAP, col_LCD_BAP, col_HCD_BAP)[sampleinfo$treatment]
 col.cell <- c(col_W,col_L,col_D,col_Y)[sampleinfo$cell]
 # cell type
 par(mar = c(5, 4, 4, 8), xpd = TRUE)  # 縮小畫布
 plotMDS(DEG_obj,col=col.cell,xlab = "Dimension 1",ylab = "Dimension 2",
         pch = 20, cex = 1.5)  # plotMDS will get logCPM before plotting
-title("Cell type")
+title("Multidimensional scaling (MDS) plot")
 legend("topright", inset = c(-0.18, 0), xpd = TRUE,
        fill=c(col_W,col_L,col_D,col_Y), legend=levels(sampleinfo$cell))
 # treatment(carcinogen)
 par(mar = c(5, 4, 4, 8), xpd = TRUE)  # 縮小畫布
 plotMDS(DEG_obj,col=col.treatment,xlab = "Dimension 1",ylab = "Dimension 2",
         pch = 20, cex = 1.5)  # plotMDS will get logCPM before plotting
-title("Carcinogen Treatment")
-legend("topright",inset = c(-0.28, 0), xpd = TRUE,
+title("Multidimensional scaling (MDS) plot")
+legend("topright",inset = c(-0.30, 0), xpd = TRUE,
        fill=c(col_CON, col_DMS, col_AZA, col_DAC, col_AS, col_CO, col_LCD,  
               col_HCD, col_BAP, col_AS_BAP, col_CO_BAP, col_LCD_BAP, col_HCD_BAP), 
        legend=levels(sampleinfo$treatment))
 ### merge
 par(mar = c(5, 4, 4, 10), xpd = TRUE)  # 縮小畫布
+pch_values <- rep(c(15,16,17,18), each = 13)
 plotMDS(DEG_obj,col=col.treatment,xlab = "Dimension 1",ylab = "Dimension 2",
         pch = pch_values, cex = 1.5)  # plotMDS will get logCPM before plotting
 title("Carcinogen Treatment")
@@ -238,13 +251,13 @@ ggplot(DEG_num_long, aes(x = group, y = count, fill = count_type)) +
   geom_bar(stat = "identity", position = "dodge") +
   geom_text(aes(label = abs(count)), vjust = ifelse(DEG_num_long$count > 0, -0.3, 1.3), position = position_dodge(width = 0.5)) +
   scale_y_continuous(labels = abs) +  # 使 y 轴标签显示为正值
-  labs(title = "DEG", x = "Short-term Groups", y = "Genes", fill = "Type") +
+  labs(title = "Differential Expression Genes (Absolute Fold change > 2)", x = "Short-term groups", y = "Genes", fill = "Type") +
   scale_fill_manual(values = c("up_regulation" = "red", "down_regulation" = "darkblue")) +
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
 ### 4-2.get DEGs and plot in each groups ---------------------------------------
-top <- 50
+top <- 100
 logcrit <- 1
 # 初始化
 DEG_df <- data.frame(num = 1:top)
@@ -286,6 +299,18 @@ DEG <- DEG_df[,-1]
 # 對數據框中的每一列計數
 de_count_all <- table(unlist(DEG)) %>% sort(decreasing = T)
 head(de_count_all,50)
+# DEG count df
+deg_count <- data.frame(gene=de_count_all)
+deg_count$gene.Var1 <- factor(deg_count$gene.Var1, levels = deg_count$gene.Var1)
+# 绘制 count 的柱状图
+ggplot(deg_count[1:30,], aes(x = gene.Var1, y = gene.Freq)) +
+  geom_bar(stat = "identity", fill = "skyblue") +
+  theme_minimal() +
+  labs(title = "Top30 common genes in top100 DEGs of all groups", 
+       x = "Genes", y = "The number of times the gene appears in DEGs (Count)") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+# bar plot
+draw_bar(names(de_count_all)[1],group = "ALL")
 
 ### get DEG in each clone
 w_up <- DEG[, grep("^W.*_up$", colnames(DEG), value = TRUE)] %>% unlist() %>% table()%>% as.data.frame()
@@ -308,16 +333,19 @@ head(deg_count_df)
 deg_count_df$gene <- factor(deg_count_df$gene, levels = deg_count_df$gene)
 df_long <- deg_count_df %>% .[1:10,] %>% 
   pivot_longer(cols = c("WT", "L858R", "Del19", "YAP"), 
-               names_to = "category", 
-               values_to = "value")
+               names_to = "Clone", 
+               values_to = "value") %>% 
+  mutate(Clone=factor(Clone,level = c("WT", "L858R", "Del19", "YAP")))
 # 绘制条形图
-ggplot(df_long, aes(x = gene, y = value, fill = category)) +
+ggplot(df_long, aes(x = gene, y = value, fill = Clone)) +
   geom_bar(stat = "identity", position = "dodge") +
-  labs(title = "", x = "gene", y = "count number") +
+  labs(title = "Top10 different genes in top100 DEGs of all groups", 
+       x= "Genes", y = "The number of times the gene appears in DEGs (Count)") +
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1)) + 
-  scale_fill_manual(values = clone)
-draw_bar(deg_count_df$gene[4])
+  scale_fill_manual(values = clone) + 
+  scale_y_continuous(breaks = seq(0, 10, by = 2))
+draw_bar(deg_count_df$gene[1],"ALL")
 
 ### use variance to get highly variable genes in each clone
 clone_var_genes <- deg_count_df %>% 
@@ -330,17 +358,6 @@ deg_count_df <- deg_count_df %>% left_join(., clone_var_genes, by = "gene")
 head(deg_count_df, 10)
 draw_bar(clone_var_genes$gene[2])
 
-# # DEG count df
-# deg_count <- data.frame(gene=enrich_de)
-# deg_count$gene.Var1 <- factor(deg_count$gene.Var1, levels = deg_count$gene.Var1)
-# # 绘制 count 的柱状图
-# ggplot(deg_count[1:30,], aes(x = gene.Var1, y = gene.Freq)) +
-#   geom_bar(stat = "identity", fill = "skyblue") +
-#   theme_minimal() +
-#   labs(title = "count of DEG in all groups", x = "gene Symbol", y = "Count") + 
-#   theme(axis.text.x = element_text(angle = 45, hjust = 1))
-# # bar plot
-# draw_bar(names(enrich_de)[10],group = "ALL")
 
 ### 4-3.get all DEG list ---------------------------------------------
 all_deg_list <- c()
@@ -364,15 +381,15 @@ length(all_deg_list)
 # plot 4 clone venn diagram
 AZA_venn <- multi_venn(name_df$file_name[c(3,16,29,42)],dir = "up", title = "AZA")
 DAC_venn <- multi_venn(name_df$file_name[c(4,17,30,43)],dir = "up", title = "DAC")
-AS_venn <- multi_venn(name_df$file_name[c(5,18,31,44)],dir = "up", title = "AS")
-CO_venn <- multi_venn(name_df$file_name[c(6,19,32,45)],dir = "up", title = "CO")
-LCD_venn <- multi_venn(name_df$file_name[c(7,20,33,46)],dir = "up", title = "LCD")
-HCD_venn <- multi_venn(name_df$file_name[c(8,21,34,47)],dir = "up", title = "HCD")
+AS_venn <- multi_venn(name_df$file_name[c(5,18,31,44)],dir = "down", title = "AS")
+CO_venn <- multi_venn(name_df$file_name[c(6,19,32,45)],dir = "down", title = "CO")
+LCD_venn <- multi_venn(name_df$file_name[c(7,20,33,46)],dir = "down", title = "LCD")
+HCD_venn <- multi_venn(name_df$file_name[c(8,21,34,47)],dir = "down", title = "HCD")
 BAP_venn <- multi_venn(name_df$file_name[c(9,22,35,48)],dir = "up", title = "BAP")
-AS_BAP_venn <- multi_venn(name_df$file_name[c(10,23,36,49)],dir = "up", title = "AS_BAP")
-CO_BAP_venn <- multi_venn(name_df$file_name[c(11,24,37,50)],dir = "up", title = "CO_BAP")
-LCD_BAP_venn <- multi_venn(name_df$file_name[c(12,25,38,51)],dir = "up", title = "LCD_BAP")
-HCD_BAP_venn <- multi_venn(name_df$file_name[c(13,26,39,52)],dir = "up", title = "HCD_BAP")
+AS_BAP_venn <- multi_venn(name_df$file_name[c(10,23,36,49)],dir = "down", title = "AS_BAP")
+CO_BAP_venn <- multi_venn(name_df$file_name[c(11,24,37,50)],dir = "down", title = "CO_BAP")
+LCD_BAP_venn <- multi_venn(name_df$file_name[c(12,25,38,51)],dir = "down", title = "LCD_BAP")
+HCD_BAP_venn <- multi_venn(name_df$file_name[c(13,26,39,52)],dir = "down", title = "HCD_BAP")
 # upset plot
 HCD_BAP_venn <- multi_venn(name_df$file_name[c(13,26,39,52)],dir = "up", upset = T)
 # get venn list gene
@@ -380,6 +397,29 @@ print(HCD_venn)
 venn_list <- AS_venn$item[[15]]
 draw_from_list(venn_list, groups = "AS")
 plot_MD(name_df$file_name[5], plot_type = 1,with_line = F)
+
+### venn heatmap
+venn_for_heatmap <- BAP_venn
+group <- "on_BAP"
+p1 <- draw_from_list(venn_for_heatmap$item[[1]], groups = group, title = "W", row_title_rot = 0,show_row_names = F)
+p2 <- draw_from_list(venn_for_heatmap$item[[2]], groups = group, title = "L", anno = F, row_title_rot = 0,show_row_names = F)
+p3 <- draw_from_list(venn_for_heatmap$item[[3]], groups = group, title = "D", anno = F, row_title_rot = 0,show_row_names = F)
+p4 <- draw_from_list(venn_for_heatmap$item[[4]], groups = group, title = "Y", anno = F, row_title_rot = 0,show_row_names = F)
+p5 <- draw_from_list(venn_for_heatmap$item[[5]], groups = group, title = "W/L", anno = F, row_title_rot = 0,show_row_names = F)
+p6 <- draw_from_list(venn_for_heatmap$item[[6]], groups = group, title = "W/D", anno = F, row_title_rot = 0,show_row_names = F)
+p7 <- draw_from_list(venn_for_heatmap$item[[7]], groups = group, title = "W/Y", anno = F, row_title_rot = 0,show_row_names = F)
+p8 <- draw_from_list(venn_for_heatmap$item[[8]], groups = group, title = "L/D", anno = F, row_title_rot = 0,show_row_names = F)
+p9 <- draw_from_list(venn_for_heatmap$item[[9]], groups = group, title = "L/Y", anno = F, row_title_rot = 0,show_row_names = F)
+p10 <- draw_from_list(venn_for_heatmap$item[[10]], groups = group, title = "D/Y", anno = F, row_title_rot = 0,show_row_names = F)
+p11 <- draw_from_list(venn_for_heatmap$item[[11]], groups = group, title = "W/L/D", anno = F, row_title_rot = 0,show_row_names = F)
+p12 <- draw_from_list(venn_for_heatmap$item[[12]], groups = group, title = "W/L/Y", anno = F, row_title_rot = 0,show_row_names = F)
+p13 <- draw_from_list(venn_for_heatmap$item[[13]], groups = group, title = "W/D/Y", anno = F, row_title_rot = 0,show_row_names = F)
+p14 <- draw_from_list(venn_for_heatmap$item[[14]], groups = group, title = "L/D/Y", anno = F, row_title_rot = 0,show_row_names = F)
+p15 <- draw_from_list(venn_for_heatmap$item[[15]], groups = group, title = "W/L/D/Y", anno = F, row_title_rot = 0,show_row_names = F)
+
+p1 %v% p2 %v% p3 %v% p4
+p5 %v% p6 %v% p7 %v% p8 %v% p9 %v% p10 %v% p11 %v% p12 %v% p13 %v% p14 %v% p15 
+p1 %v% p2 %v% p3 %v% p4 %v% p5 %v% p6 %v% p7 %v% p8 %v% p9 %v% p10 %v% p11 %v% p12 %v% p13 %v% p14 %v% p15 
 
 # ### use divenn2.0
 # get_divenn("ip_Y_V_S_CO_0_deg.xlsx",output_name = "CO.xlsx")
@@ -457,7 +497,8 @@ mutate(react_result, qscore = -log(p.adjust, base=10)) %>%
 
 ### 9.GSEA analysis -----------------------------------------------------------
 ### KEGG
-keg <- kegg_run("ip_D_V_S_HCD_0_deg.xlsx")  # change
+file_name <- "ip_W_V_S_HCD_0_deg.xlsx"    # change
+keg <- kegg_run(file_name,pvalueCutoff = 1) 
 ### dot plot
 dotplot(keg, showCategory = 10, label_format=50, 
         title = "Enriched Pathways", split=".sign") + 
@@ -472,14 +513,20 @@ cnetplot(keg_gene, categorySize="pvalue",
   scale_color_gradientn(name = "logFC", colors=colors, 
                         na.value = "#E5C494", limits = c(-2, 2))
 ### GSEA plot
-ID <- 15
-enrichplot::gseaplot2(keg, geneSetID = ID, title = keg$Description[ID])
+ID <- 69
+enrichplot::gseaplot2(keg, geneSetID = ID, title = paste(keg$Description[ID],"in",abb(file_name,type = "file")))
 ### Tree plot
 kmat <- enrichplot::pairwise_termsim(keg)
 treeplot(kmat, cluster.params = list(method = "average"))
 # heatmap
-list <- force_list(keg_gene@result$core_enrichment[15])
-draw_from_list(list =list , groups = "ALL", id = "SYMBOL")
+list <- force_list(keg_gene@result$core_enrichment[ID])
+draw_from_list(list =list , groups = "CD", id = "SYMBOL",title = keg_gene@result$Description[ID])
+# get gene list
+keg_gene_list <- get_gse_list(file_num = 8,kegg_id = keg_gene@result$ID[ID])
+draw_from_list(keg_gene_list, "CD",title = keg_gene@result$Description[ID])
+file_num <- 8
+plot_MD(name_df$file_name[file_num],list = keg_gene_list,only_DE = F,
+        title = paste(name_df$abbreviate[file_num], keg_gene@result$Description[ID]))
 
 ### 10.cluster analysis ------------------------------------------------------
 file_name <- "ip_Y_V_S_HCD_BAP_0_deg.xlsx"
@@ -786,7 +833,7 @@ non_asian_id <- clin.LUAD %>%
   filter(race!="asian" & gender=="female") %>% 
   pull(submitter_id)
 ### draw box plot
-draw_TCGA_boxplot("RAB7B")
+draw_TCGA_boxplot("KRT80")
 
 ### survival
 # load TCGA-LUAD patient data
@@ -800,7 +847,7 @@ tcga_count <- "/Users/benson/Documents/project/RNA-seq1-3/data/tcga_count.RDS" %
   readRDS()
 
 # survival curve of mutation (in 'output' file)
-draw_muta_survival("SERPINE1")
+draw_muta_survival("KRT15")
 # survival curve of gene expression (in 'output' file)
 draw_TCGA_survival("CPA4", population = "ALL")
 
@@ -819,9 +866,7 @@ cell_count <- readxl::read_excel("/Users/benson/Documents/project/RNA-seq1-3/dat
 cell_count$Median <- NULL
 
 # draw boxplot by 'Gender','Smoking Status','Stage' or 'EGFR_Status'
-gene <- names(enrich_de[1])
-gene <- "SERPINE1"
-print(gene)
+gene <- "POLH"
 draw_cell_boxplot(gene = gene, by="EGFR_Status")
 draw_cell_boxplot(gene = gene, by="Stage")
 draw_cell_boxplot(gene = gene, by="Gender")
@@ -894,7 +939,43 @@ string_db <- STRINGdb$new(version = "11.5", species = 9606,
 class(string_db)
 
 ### PPI plot
-draw_ppi(file_num = 13,top = 50)
+log_crit = 1
+file_num = 6
+my_ppi <- draw_ppi(file_num = file_num, log_crit = log_crit)
+ppi_list <- my_ppi[,c(1,5,8,11)] %>% unlist() %>% unique()
+paste_list(ppi_list)
+
+### PPI in gene list
+list <- get_kegg_list(keg_gene@result$ID[ID])
+my_ppi <- draw_ppi(file_num = 9, log_crit = log_crit, list = list)
+
+### venn diagram
+AZA_venn <- multi_venn(name_df$file_name[c(3,16,29,42)],dir = "up", log_crit = log_crit, title = paste0("AZA DEGs"," (|logFC|>",log_crit,")"))
+DAC_venn <- multi_venn(name_df$file_name[c(4,17,30,43)],dir = "up", log_crit = log_crit, title =paste0("DAC DEGs"," (|logFC|>",log_crit,")"))
+AS_venn <- multi_venn(name_df$file_name[c(5,18,31,44)],dir = "up", log_crit = log_crit, title = paste0("As DEGs"," (|logFC|>",log_crit,")"))
+CO_venn <- multi_venn(name_df$file_name[c(6,19,32,45)],dir = "up", log_crit = log_crit, title = paste0("Co DEGs"," (|logFC|>",log_crit,")"))
+LCD_venn <- multi_venn(name_df$file_name[c(7,20,33,46)],dir = "up", log_crit = log_crit, title = paste0("LCd DEGs"," (|logFC|>",log_crit,")"))
+HCD_venn <- multi_venn(name_df$file_name[c(8,21,34,47)],dir = "up", log_crit = log_crit, title = paste0("HCd DEGs"," (|logFC|>",log_crit,")"))
+BAP_venn <- multi_venn(name_df$file_name[c(9,22,35,48)],dir = "up", log_crit = log_crit, title = paste0("BaP DEGs"," (|logFC|>",log_crit,")"))
+AS_BAP_venn <- multi_venn(name_df$file_name[c(10,23,36,49)],dir = "up", log_crit = log_crit, title = paste0("As_BaP DEGs"," (|logFC|>",log_crit,")"))
+CO_BAP_venn <- multi_venn(name_df$file_name[c(11,24,37,50)],dir = "up", log_crit = log_crit, title = paste0("Co_BaP DEGs"," (|logFC|>",log_crit,")"))
+LCD_BAP_venn <- multi_venn(name_df$file_name[c(12,25,38,51)],dir = "up", log_crit = log_crit, title = paste0("LCd_BaP DEGs"," (|logFC|>",log_crit,")"))
+HCD_BAP_venn <- multi_venn(name_df$file_name[c(13,26,39,52)],dir = "up", log_crit = log_crit, title = paste0("HCd_BaP DEGs"," (|logFC|>",log_crit,")"))
+
+common_list <- HCD_BAP_venn$item[15] %>% unlist()
+paste_list(common_list)
 
 
+### 22.ORA for 4 clones -------------------------------------------------
+AS_ORA <- run_myORA(5,fun="enrichKEGG","AS_ORA_KEGG")
+CO_ORA <- run_myORA(6,fun="enrichKEGG","CO_ORA_KEGG")
+LCD_ORA <- run_myORA(7,fun="enrichKEGG","LCD_ORA_KEGG")
+HCD_ORA <- run_myORA(8,fun="enrichKEGG","HCD_ORA_KEGG")
+BAP_ORA <- run_myORA(9,fun="enrichKEGG","BAP_ORA_KEGG")
+AS_BAP_ORA <- run_myORA(10,fun="enrichKEGG","AS_BAP_ORA_KEGG")
+CO_BAP_ORA <- run_myORA(11,fun="enrichKEGG","CO_BAP_ORA_KEGG")
+LCD_BAP_ORA <- run_myORA(12,fun="enrichKEGG","LCD_BAP_ORA_KEGG")
+HCD_BAP_ORA <- run_myORA(13,fun="enrichKEGG","HCD_BAP_ORA_KEGG")
 
+kegg_list <- get_kegg_list("hsa04068")
+draw_from_list(kegg_list,"CD")
