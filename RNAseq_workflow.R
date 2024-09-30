@@ -14,11 +14,12 @@ library(openxlsx)
 library(ggrepel)
 library(edgeR)
 library(TCGAbiolinks)
-# load my function
-source("RNAseq_function.R")
+
 # pre-load data
 wd <- "/Users/benson/Documents/project/RNA-seq1-3/"
 setwd(wd)
+# load my function
+source("RNAseq_function.R")
 data_path <- "/Users/benson/Documents/raw_data/RNA-seq1-3/ST"
 output_dir <- "/Users/benson/Documents/project/RNA-seq1-3/output"
 name_df <- openxlsx::read.xlsx("/Users/benson/Documents/project/RNA-seq1-3/data/name.xlsx")
@@ -57,6 +58,9 @@ myCPM_gene <- myCPM %>%
 # TCGA patients' mutation rate
 muta_rate <- "/Users/benson/Documents/project/RNA-seq1-3/data/muta_rate.RDS" %>% 
   readRDS()
+# KEGG pathway id data
+kegg_id_df <- "data/kegg_id_df.RDS" %>% readRDS()
+kegg_id_df$pathway <- gsub(" - Homo sapiens \\(human\\)", "", kegg_id_df$pathway)
 # preparing sample annotation
 sampleinfo <- data.frame(row = names(mylogCPM),
                          sample = names(mylogCPM), 
@@ -114,10 +118,10 @@ myFC <- myFC[,-c(1,2,14,15,27,28,40,41)]
 var_id <- apply(myFC, 1, var)
 head(var_id)
 # Get the gene names for the top 500 most variable genes
-select_var <- names(sort(var_id, decreasing=TRUE))[1:500]
-head(select_var)
+select_var <- names(sort(var_id, decreasing=TRUE))
+head(select_var[1:500])
 # Subset logcounts matrix
-highly_variable_lcpm <- myFC[select_var,] %>% as.matrix()
+highly_variable_lcpm <- myFC[select_var[1:500],] %>% as.matrix()
 dim(highly_variable_lcpm)
 head(highly_variable_lcpm)
 # plot heatmap of 500 high variable genes
@@ -129,8 +133,8 @@ draw_from_list(rownames(highly_variable_lcpm),groups = "ALL",id = "SYMBOL",
 var_genes <- apply(myFC, 1, var) %>% sort(,decreasing = T)
 head(var_genes, 50)
 draw_bar(names(var_genes[5]))
-draw_from_list(names(var_genes)[1:100],id = "SYMBOL",col_cluster = T,
-               title = "Top 100 most variable genes across samples")
+draw_from_list(names(var_genes)[1:100],id = "SYMBOL",col_cluster = F,
+               title = "Top 100 most variable genes across samples",FC = T)
 
 ### 3-3.MDS ----------------------------------
 # Create a DGEList object
@@ -159,7 +163,7 @@ par(mar = c(5, 4, 4, 8), xpd = TRUE)  # 縮小畫布
 plotMDS(DEG_obj,col=col.treatment,xlab = "Dimension 1",ylab = "Dimension 2",
         pch = 20, cex = 1.5)  # plotMDS will get logCPM before plotting
 title("Multidimensional scaling (MDS) plot")
-legend("topright",inset = c(-0.30, 0), xpd = TRUE,
+legend("topright",inset = c(-0.35, 0), xpd = TRUE,
        fill=c(col_CON, col_DMS, col_AZA, col_DAC, col_AS, col_CO, col_LCD,  
               col_HCD, col_BAP, col_AS_BAP, col_CO_BAP, col_LCD_BAP, col_HCD_BAP), 
        legend=levels(sampleinfo$treatment))
@@ -168,7 +172,7 @@ par(mar = c(5, 4, 4, 10), xpd = TRUE)  # 縮小畫布
 pch_values <- rep(c(15,16,17,18), each = 13)
 plotMDS(DEG_obj,col=col.treatment,xlab = "Dimension 1",ylab = "Dimension 2",
         pch = pch_values, cex = 1.5)  # plotMDS will get logCPM before plotting
-title("Carcinogen Treatment")
+title("Multidimensional scaling (MDS) plot")
 legend("topright",inset = c(-0.118, 0), xpd = TRUE,
        pch=c(15,16,17,18), 
        legend=levels(sampleinfo$cell))
@@ -180,24 +184,42 @@ legend("topright",inset = c(-0.4, 0), xpd = TRUE,
 ### 3-4.3D PCA -------------------------------------------------------------
 library(plotly)
 # PCA
-count_mat <- t(myCPM)
+count_mat <- t(mylogCPM)
 prin_comp <- prcomp(count_mat, rank. = 3)
 components <- prin_comp[["x"]]
 components <- data.frame(components)
 components$PC2 <- -components$PC2
 components$PC3 <- -components$PC3
-components <- components %>% rownames_to_column("group")
+components <- components %>% dplyr::mutate(group=factor(rownames(.),levels=name_df$abbreviate))
 # calculate PC cover ratio
 explained_variance_ratio <- summary(prin_comp)[["importance"]]['Proportion of Variance',]
 pc1 <- round(100 * explained_variance_ratio[1],1)
 pc2 <- round(100 * explained_variance_ratio[2],1)
 pc3 <- round(100 * explained_variance_ratio[3],1)
-tit <- paste0('Explained Variance PC1 to PC3 ',pc1,"%/",pc2,"%/",pc3,"%")
+
 # set colors
 groups_color <- rep(c('#FFFF37','#FFDC35','#FFD2D2','#00DB00','#FF5151','#EA0000','#E0E0E0',
                       '#FF9797','#ADADAD','#005AB5','#000079','#0080FF','#0000E3'),4)
-clone_color <- rep(c('#F4A7B7','#FBE251','#A5DEE4','#FF1493'),each=13)
+clone_color <- rep(c(col_W,col_L,col_D,col_Y),each=13)
+# 2D PCA plot
+fig <- plot_ly(components, x = ~PC1, y = ~PC2, color = ~group, colors = clone_color, type = 'scatter', mode = 'markers')%>%
+  layout(
+    legend=list(title=list(text='color')),
+    plot_bgcolor='#e5ecf6',
+    xaxis = list(
+      title = paste0("PC1 (",pc1,"%)"),
+      zerolinecolor = "#ffff",
+      zerolinewidth = 2,
+      gridcolor='#ffff'),
+    yaxis = list(
+      title = paste0("PC2 (",pc2,"%)"),
+      zerolinecolor = "#ffff",
+      zerolinewidth = 2,
+      gridcolor='#ffff'))
+fig %>% layout(title = "PCA plot", scene = list(bgcolor = "#e5ecf6"))
+
 # 3D PCA plot
+tit <- paste0('PCA (3D) (PC1 to PC3 ',pc1,"%/",pc2,"%/",pc3,"%)")
 fig <- plotly::plot_ly(components, x = ~PC1, y = ~PC2, z = ~PC3, color = ~group, 
                colors = clone_color) %>%
   plotly::add_markers(size = 12)  
@@ -251,7 +273,7 @@ ggplot(DEG_num_long, aes(x = group, y = count, fill = count_type)) +
   geom_bar(stat = "identity", position = "dodge") +
   geom_text(aes(label = abs(count)), vjust = ifelse(DEG_num_long$count > 0, -0.3, 1.3), position = position_dodge(width = 0.5)) +
   scale_y_continuous(labels = abs) +  # 使 y 轴标签显示为正值
-  labs(title = "Differential Expression Genes (Absolute Fold change > 2)", x = "Short-term groups", y = "Genes", fill = "Type") +
+  labs(title = "Differential Expression Genes (Absolute Fold change > 2)", x = "", y = "Genes", fill = "Type") +
   scale_fill_manual(values = c("up_regulation" = "red", "down_regulation" = "darkblue")) +
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
@@ -376,6 +398,18 @@ all_deg_list <- unique(all_deg_list)
 # saveRDS(all_deg_list,"data/all_deg_list.RDS")
 all_deg_list <- file.path(wd,"data/all_deg_list.RDS") %>% readRDS
 length(all_deg_list)
+draw_from_list(all_deg_list,show_row_names = F,title = "8051 DEGs")
+
+#
+df <- mylogCPM_gene %>% filter(rownames(.)%in% all_deg_list)
+# Calculate the Spearman correlation coefficient
+spearman_cor <- cor(df$L_DAC, df$D_HCD, method = "spearman")
+# Create a dot plot using ggplot2
+ggplot(df, aes(x = L_DAC, y = D_HCD)) +
+  geom_point() +
+  ggtitle(paste("Spearman Correlation:", round(spearman_cor, 2))) +
+  xlab("L_DAC") +
+  ylab("D_HCD")
 
 ### 5.venn diagram ----------------------------------------------------------
 # plot 4 clone venn diagram
@@ -383,13 +417,13 @@ AZA_venn <- multi_venn(name_df$file_name[c(3,16,29,42)],dir = "up", title = "AZA
 DAC_venn <- multi_venn(name_df$file_name[c(4,17,30,43)],dir = "up", title = "DAC")
 AS_venn <- multi_venn(name_df$file_name[c(5,18,31,44)],dir = "down", title = "AS")
 CO_venn <- multi_venn(name_df$file_name[c(6,19,32,45)],dir = "down", title = "CO")
-LCD_venn <- multi_venn(name_df$file_name[c(7,20,33,46)],dir = "down", title = "LCD")
-HCD_venn <- multi_venn(name_df$file_name[c(8,21,34,47)],dir = "down", title = "HCD")
-BAP_venn <- multi_venn(name_df$file_name[c(9,22,35,48)],dir = "up", title = "BAP")
+LCD_venn <- multi_venn(name_df$file_name[c(7,20,33,46)],dir = "up", title = "LCD")
+HCD_venn <- multi_venn(name_df$file_name[c(8,21,34,47)],dir = "up", title = "HCD")
+BAP_venn <- multi_venn(name_df$file_name[c(9,22,35,48)],dir = "down", title = "BAP")
 AS_BAP_venn <- multi_venn(name_df$file_name[c(10,23,36,49)],dir = "down", title = "AS_BAP")
 CO_BAP_venn <- multi_venn(name_df$file_name[c(11,24,37,50)],dir = "down", title = "CO_BAP")
-LCD_BAP_venn <- multi_venn(name_df$file_name[c(12,25,38,51)],dir = "down", title = "LCD_BAP")
-HCD_BAP_venn <- multi_venn(name_df$file_name[c(13,26,39,52)],dir = "down", title = "HCD_BAP")
+LCD_BAP_venn <- multi_venn(name_df$file_name[c(12,25,38,51)],dir = "up", title = "LCD_BAP")
+HCD_BAP_venn <- multi_venn(name_df$file_name[c(13,26,39,52)],dir = "up", title = "HCD_BAP")
 # upset plot
 HCD_BAP_venn <- multi_venn(name_df$file_name[c(13,26,39,52)],dir = "up", upset = T)
 # get venn list gene
@@ -443,16 +477,14 @@ top <- get_deg(file_name, log_crit = c(1,-1),dir = "down",type = "SYMBOL", top =
 draw_from_list(list = top, groups = group, id = "SYMBOL")
 
 ### 7.ORA several groups with heatmap -----------------------------------------
-file_list <- c("ip_W_V_S_HCD_BAP_0_deg.xlsx", "ip_L_V_S_HCD_BAP_0_deg.xlsx", 
-               "ip_D_V_S_HCD_BAP_0_deg.xlsx","ip_Y_V_S_HCD_BAP_0_deg.xlsx")
-group_names <- c("WT", "L858R", "Del19","YAP")
-### KEGG
-title <- "HCD_BAP"
+file_num <- 5
+title <- "AS"
 dir <- "up"
-p1 <- plot_heatmap(file_list, group_names, analysis = "kegg", dir=dir, col_title = title,
-                   row_title = "KEGG", top = 20)
+### KEGG
+p1 <- plot_heatmap(file_num, db="kegg", dir=dir, 
+                   col_title=title, row_title=NULL,top=20,return_df=F)
 ### Reactome
-p2 <- plot_heatmap(file_list, group_names, analysis = "reactome", dir=dir, 
+p2 <- plot_heatmap(file_num, db = "reactome", dir=dir, 
                    row_title = "Reactome", top = 20)
 p1 %v% p2
 
@@ -497,8 +529,8 @@ mutate(react_result, qscore = -log(p.adjust, base=10)) %>%
 
 ### 9.GSEA analysis -----------------------------------------------------------
 ### KEGG
-file_name <- "ip_W_V_S_HCD_0_deg.xlsx"    # change
-keg <- kegg_run(file_name,pvalueCutoff = 1) 
+file_name <- "D_CON_0_deg.xlsx"    # change
+keg <- kegg_run(file_name,pvalueCutoff = 0.05) 
 ### dot plot
 dotplot(keg, showCategory = 10, label_format=50, 
         title = "Enriched Pathways", split=".sign") + 
@@ -507,20 +539,21 @@ dotplot(keg, showCategory = 10, label_format=50,
 keg_gene <- DOSE::setReadable(keg, 'org.Hs.eg.db', 'ENTREZID') # convert gene ID to Symbol
 View(keg_gene@result %>% rownames_to_column("pathway_ID"))
 cnetplot(keg_gene, categorySize="pvalue", 
-         showCategory = keg_gene@result$Description[c(16)],  # change
+         showCategory = keg_gene@result$Description[c(2)],  # change
          color.params = list(foldChange = keg_gene@geneList[abs(keg_gene@geneList)>1]  # change
          )) +
   scale_color_gradientn(name = "logFC", colors=colors, 
                         na.value = "#E5C494", limits = c(-2, 2))
 ### GSEA plot
-ID <- 69
+ID <- 1
 enrichplot::gseaplot2(keg, geneSetID = ID, title = paste(keg$Description[ID],"in",abb(file_name,type = "file")))
+
 ### Tree plot
 kmat <- enrichplot::pairwise_termsim(keg)
 treeplot(kmat, cluster.params = list(method = "average"))
 # heatmap
 list <- force_list(keg_gene@result$core_enrichment[ID])
-draw_from_list(list =list , groups = "CD", id = "SYMBOL",title = keg_gene@result$Description[ID])
+draw_from_list(list =list , groups = "CON", id = "SYMBOL",title = keg_gene@result$Description[ID])
 # get gene list
 keg_gene_list <- get_gse_list(file_num = 8,kegg_id = keg_gene@result$ID[ID])
 draw_from_list(keg_gene_list, "CD",title = keg_gene@result$Description[ID])
@@ -571,13 +604,13 @@ net <- "/Users/benson/Documents/project/RNA-seq1-3/data/net.RDS" %>% readRDS()
 net_TF <- "/Users/benson/Documents/project/RNA-seq1-3/data/net_TF.RDS" %>% readRDS()
 
 ### pathway 
-run_path_heatmap(myCPM_gene)
+run_path_heatmap(myCPM_gene[CD])
 # pathway for specific group
-file_name <- "ip_L_V_S_AS_BAP_0_deg.xlsx"   # change
+file_name <- "ip_W_V_S_CO_0_deg.xlsx"   # change
 # pathway barplot
-run_pathway(file_name, title = abb(file_name))
+run_pathway(file_name, title = abb(file_name,type = "file"))
 # pathway specific genes MD plot
-path <- plot_pathway(file_name, "Hypoxia", title = abb(file_name))
+path <- plot_pathway(file_name, "EGFR", title = abb(file_name,type = "file"))
 # top50 heatmap
 path_top50 <- path %>% arrange(desc(abs(logFC))) %>% head(50) %>% pull(ID)
 draw_from_list(list = path_top50, groups = "CD",
@@ -585,14 +618,14 @@ draw_from_list(list = path_top50, groups = "CD",
 plot_MD(file_name, list = path_top50, plot_type = 2)
 
 ### TFs 
-run_TF_heatmap(myCPM_gene)
+run_TF_heatmap(myCPM_gene[CD],group = name_df$abbreviate[CD])
 # TFs for specific group
-file_name <- "ip_Y_V_S_HCD_BAP_0_deg.xlsx"   # change
+file_name <- "ip_W_V_S_AS_BAP_0_deg.xlsx"   # change
 # TFs barplot
 run_TF(file_name, title = abb(file_name, type = "file"))
 tf_candidate <- run_TF(file_name, title = abb(file_name, type = "file"), plot = F)
 # TFs specific genes MD plot
-tf <- "NFKB"
+tf <- "APEX1"
 TF <- plot_TF(file_name, TF = tf, title = "regulons of")
 # ggsave("TF.jpeg")
 # top50 heatmap
@@ -617,11 +650,11 @@ draw_from_list(c(target_gene_TF,target_gene),groups = "CD")
 library(RTN)
 # column annotation and interesting TFs
 colAnnotation <- openxlsx::read.xlsx("/Users/benson/Documents/project/RNA-seq1-3/data/sampleinfo.xlsx",rowNames = T)
-file_number <- 10
+file_number <- 5
 name_df$file_name[file_number]
 tf_candidate <- run_TF(name_df$file_name[file_number], 
-                       title = abb(name_df$file_name[file_number]),plot = F) %>% 
-  pull(source) %>% head(5)
+                       title = abb(name_df$file_name[file_number])) %>% 
+  pull(source) %>% head(10)
 print(tf_candidate)
 ### TNI object
 rtni <- RTN::tni.constructor(expData = as.matrix(myCPM), 
@@ -629,7 +662,7 @@ rtni <- RTN::tni.constructor(expData = as.matrix(myCPM),
                              colAnnotation = colAnnotation, 
                              rowAnnotation = gene_df)
 
-rtni <- tni.permutation(rtni, nPermutations = 100)  # Please set nPermutations >= 1000
+rtni <- tni.permutation(rtni, nPermutations = 1000)  # Please set nPermutations >= 1000
 rtni <- tni.bootstrap(rtni)
 rtni <- tni.dpi.filter(rtni)
 tni.regulon.summary(rtni)
@@ -744,10 +777,11 @@ draw_from_list(net_TF_list_all,groups = "ALL",show_row_names = F,col_cluster = T
 
 ### 14.get KEGG gene list in DEG ----------------------------------------------
 # 獲取所有hsa（人類）的pathway信息
-pathways_list <- KEGGREST::keggList("pathway", "hsa")
-kegg_id_df <- data.frame(num=c(1:length(pathways_list)),
-                         hsa = names(pathways_list), 
-                         pathway = pathways_list)
+kegg_list <- KEGGREST::keggList("pathway", "hsa")
+kegg_id_df <- data.frame(num=c(1:length(kegg_list)),
+                         hsa = names(kegg_list), 
+                         pathway = kegg_list)
+# saveRDS(kegg_id_df,"data/kegg_id_df.RDS")
 # get specific pathway for our study
 pathway_df <- kegg_id_df[c(90,91,92,108:114,133,164,170,268,270,291),]
 pathway_id <- pathway_df$hsa[2]
@@ -791,8 +825,8 @@ muta_rate <- "/Users/benson/Documents/project/RNA-seq1-3/data/muta_rate.RDS" %>%
   readRDS()
 ### filter genes we interesting 
 # get TFs' regulons
-tf <- "JUN"   # TFs in our study
-plot_TF(name_df$file_name[13], tf, title = abb(file_name), plot_type = 1)
+tf <- "JUND"   # TFs in our study
+plot_TF(name_df$file_name[5], tf, title = abb(file_name), plot_type = 1)
 tf_regu_list1 <- tf_regu_df %>% arrange(desc(abs(logFC))) %>% pull(ID)
 # top50 heatmap
 draw_from_list(list = tf_regu_list1[1:50], groups = "CD",
@@ -823,6 +857,14 @@ tcga_count <- "/Users/benson/Documents/project/RNA-seq1-3/data/tcga_count.RDS" %
 # load TCGA-LUAD patient clinical data
 clin.LUAD <- "/Users/benson/Documents/project/RNA-seq1-3/data/clin_LUAD.RDS" %>% 
   readRDS()
+# load TCGA-LUAD RNA-seq data
+rna_data <- "/Users/benson/Documents/project/RNA-seq1-3/data/rna_data.RDS" %>% 
+  readRDS()
+
+# 提取臨床資料
+clinical_data <- SummarizedExperiment::colData(rna_data)
+tcga_info <- clinical_data@listData %>% as.data.frame() %>% .[,c(1,5)]
+
 # 抓出亞洲女性與非亞洲女性id
 asian_id <- clin.LUAD %>% 
   as.data.frame()%>% 
@@ -833,7 +875,7 @@ non_asian_id <- clin.LUAD %>%
   filter(race!="asian" & gender=="female") %>% 
   pull(submitter_id)
 ### draw box plot
-draw_TCGA_boxplot("KRT80")
+draw_TCGA_boxplot("SPP1")
 
 ### survival
 # load TCGA-LUAD patient data
@@ -849,25 +891,32 @@ tcga_count <- "/Users/benson/Documents/project/RNA-seq1-3/data/tcga_count.RDS" %
 # survival curve of mutation (in 'output' file)
 draw_muta_survival("KRT15")
 # survival curve of gene expression (in 'output' file)
-draw_TCGA_survival("CPA4", population = "ALL")
+draw_TCGA_survival("KRT80", population = "ALL")
+# draw TCGA specific gene
+draw_tcga_boxplot("KRT15")
+
 
 ### 17.2020 cellpress -------------------------------------------------------
+cell_count <- readxl::read_excel("/Users/benson/Documents/project/RNA-seq1-3/data/2020cell.xlsx") %>% 
+  as.data.frame() %>% group_by(gene) %>% summarize(across(where(is.numeric), sum)) %>% 
+  column_to_rownames("gene")
+cell_count_df <- cell_count
+cell_count$Median <- NULL
+
 cell_info <- readxl::read_excel("/Users/benson/Documents/project/RNA-seq1-3/data/2020cell_info.xlsx") %>% 
   as.data.frame() %>% 
   mutate(Stage=ifelse(Stage %in% c("IA","IB"), "stage I",Stage)) %>% 
   mutate(Stage=ifelse(Stage %in% c("IIA","IIB"), "stage II",Stage)) %>% 
   mutate(Stage=ifelse(Stage %in% c("IIIA","IIIB"), "stage III",Stage)) %>%
   mutate(Stage=ifelse(Stage %in% c("IV"), "stage IV",Stage)) %>% 
-  rename(Smoking_Status=`Smoking Status`)
-  
-cell_count <- readxl::read_excel("/Users/benson/Documents/project/RNA-seq1-3/data/2020cell.xlsx") %>% 
-  as.data.frame() %>% group_by(gene) %>% summarize(across(where(is.numeric), sum)) %>% 
-  column_to_rownames("gene")
-cell_count$Median <- NULL
+  rename(Smoking_Status=`Smoking Status`) %>% 
+  dplyr::filter(ID%in%colnames(cell_count))
 
 # draw boxplot by 'Gender','Smoking Status','Stage' or 'EGFR_Status'
-gene <- "POLH"
-draw_cell_boxplot(gene = gene, by="EGFR_Status")
+gene <- "GDF15"
+gene <- match_list[6]
+draw_bar(gene)
+draw_cell_boxplot(gene = gene, by="EGFR_Status",egfr = T)
 draw_cell_boxplot(gene = gene, by="Stage")
 draw_cell_boxplot(gene = gene, by="Gender")
 draw_cell_boxplot(gene = gene, by="Smoking_Status")
@@ -881,6 +930,50 @@ draw_cell_boxplot(sig = sig, by="Gender", title = title)
 draw_cell_boxplot(sig = sig, by="Smoking_Status", title = title)
 # ggsave("output/1.png")
 
+### compare analysis
+cell_gene <- cell_count_df %>% filter(Median>1|Median< -1) %>% arrange(desc(Median)) %>% 
+  rownames_to_column("gene") %>% pull("gene")
+length(cell_gene)
+match_list <- intersect(select_var,cell_gene)
+length(match_list)
+
+### cell
+cell_w <- cell_info %>% filter(EGFR_Status=="WT") %>% pull(ID)
+cell_l <- cell_info %>% filter(EGFR_Status=="L858R") %>% pull(ID)
+cell_d <- cell_info %>% filter(EGFR_Status=="exon19del") %>% pull(ID)
+
+log_medium_criteria <- 2
+cell_w_count <- cell_count %>% dplyr::select(all_of(cell_w)) %>% rowwise() %>%
+  mutate(median_value = median(c_across(everything()), na.rm = TRUE)) %>%
+  ungroup() %>% rownames_to_column() %>%
+  mutate(gene = rownames(cell_count_df)) %>% filter(median_value>log_medium_criteria) %>% 
+  pull(gene)
+cell_l_count <- cell_count %>% dplyr::select(all_of(cell_l))%>% rowwise() %>%
+  mutate(median_value = median(c_across(everything()), na.rm = TRUE)) %>%
+  ungroup() %>% rownames_to_column() %>%
+  mutate(gene = rownames(cell_count_df)) %>% filter(median_value>log_medium_criteria) %>% 
+  pull(gene)
+cell_d_count <- cell_count %>% dplyr::select(all_of(cell_d))%>% rowwise() %>%
+  mutate(median_value = median(c_across(everything()), na.rm = TRUE)) %>%
+  ungroup() %>% rownames_to_column() %>%
+  mutate(gene = rownames(cell_count_df)) %>% filter(median_value>log_medium_criteria) %>% 
+  pull(gene)
+paste_list(cell_l_count)
+
+# compare with cell
+num <- 5
+AS_W_de <- get_deg(name_df$file_name[num],log_crit = 1,dir = "up")
+AS_L_de <- get_deg(name_df$file_name[num+13],log_crit = 1,dir = "up")
+AS_D_de <- get_deg(name_df$file_name[num+26],log_crit = 1,dir = "up")
+
+list_W <- intersect(cell_w_count,AS_W_de)
+list_L <- intersect(cell_l_count,AS_L_de)
+list_D <- intersect(cell_d_count,AS_D_de)
+
+draw_from_list(list_W,groups = "AS",title = "")
+draw_from_list(list_L,groups = "CD",title = "")
+draw_from_list(list_D,groups = "CD",title = "")
+
 ### 18.Spearman's correlation for signature ----------------------------------
 ### Spearman's correlation
 draw_Spearman_bar(sig_num = 5, group = "AS",top = 30)
@@ -890,16 +983,44 @@ draw_Spearman_bar(sig_num = 52, top = 10, count_df = "cell")
 draw_boxplot(sig_num = 10, group = "ALL", top = 20)
 
 ### 19.hallmark in cancer ---------------------------------------------------
-w <- read.csv(paste0("/Users/benson/Desktop/hallmark/","W_",group), sep = "\t")
-l <- read.csv(paste0("/Users/benson/Desktop/hallmark/","L_",group), sep = "\t")
-d <- read.csv(paste0("/Users/benson/Desktop/hallmark/","D_",group), sep = "\t")
-y <- read.csv(paste0("/Users/benson/Desktop/hallmark/","Y_",group), sep = "\t")
+deg <- get_deg(name_df$file_name[48], log_crit = c(1,-1),dir = "up",type = "SYMBOL")
+paste_list(deg)
+group <- "HCD_BAP"
+w <- read.csv(paste0("/Users/benson/Desktop/hallmark/","W_",group), sep = "\t") %>% mutate(Term = gsub("(.)(.*)", "\\U\\1\\L\\2", Term, perl = TRUE))
+l <- read.csv(paste0("/Users/benson/Desktop/hallmark/","L_",group), sep = "\t") %>% mutate(Term = gsub("(.)(.*)", "\\U\\1\\L\\2", Term, perl = TRUE))
+d <- read.csv(paste0("/Users/benson/Desktop/hallmark/","D_",group), sep = "\t") %>% mutate(Term = gsub("(.)(.*)", "\\U\\1\\L\\2", Term, perl = TRUE))
+y <- read.csv(paste0("/Users/benson/Desktop/hallmark/","Y_",group), sep = "\t") %>% mutate(Term = gsub("(.)(.*)", "\\U\\1\\L\\2", Term, perl = TRUE))
+# union
+num <- 10
+list <- get_union(num = num)
+draw_from_list(list,groups = "CD", anno = T, title = df$Term[num])
 
 # check list
-marker_list <- strsplit(l$Genes[2], ";")[[1]]
-draw_from_list(marker_list,groups = "CD")
+df <- w
+group <- "CD"
+marker_list1 <- strsplit(df$Genes[1], ";")[[1]]
+marker_list2 <- strsplit(df$Genes[2], ";")[[1]]
+marker_list3 <- strsplit(df$Genes[3], ";")[[1]]
+marker_list4 <- strsplit(df$Genes[4], ";")[[1]]
+marker_list5 <- strsplit(df$Genes[5], ";")[[1]]
+marker_list6 <- strsplit(df$Genes[6], ";")[[1]]
+marker_list7 <- strsplit(df$Genes[7], ";")[[1]]
+marker_list8 <- strsplit(df$Genes[8], ";")[[1]]
+marker_list9 <- strsplit(df$Genes[9], ";")[[1]]
+marker_list10 <- strsplit(df$Genes[10], ";")[[1]]
+draw_from_list(marker_list1,groups = group, title = df$Term[1])
+draw_from_list(marker_list2,groups = group, anno = T, title = df$Term[2])
+draw_from_list(marker_list3,groups = group, anno = T, title = df$Term[3])
+draw_from_list(marker_list4,groups = group, anno = T, title = df$Term[4])
+draw_from_list(marker_list5,groups = group, anno = T, title = df$Term[5])
+draw_from_list(marker_list6,groups = group, anno = T, title = df$Term[6])
+draw_from_list(marker_list7,groups = group, anno = T, title = df$Term[7])
+draw_from_list(marker_list8,groups = group, anno = T, title = df$Term[8])
+draw_from_list(marker_list9,groups = group, anno = T, title = df$Term[9])
+draw_from_list(marker_list10,groups = group, anno = T, title = df$Term[10])
+
 # hallmark p.adj
-draw_hallmark(group="HCD_BAP", dir="up", row_title="hallmarks of cancer")
+draw_hallmark(group="HCD", dir="up", row_title="hallmarks of cancer")
 
 ### 20.signature ------------------------------------------------------------
 CO_venn <- multi_venn(name_df$file_name[c(6,19,32,45)],dir = "up", title = "CO")
@@ -946,8 +1067,8 @@ ppi_list <- my_ppi[,c(1,5,8,11)] %>% unlist() %>% unique()
 paste_list(ppi_list)
 
 ### PPI in gene list
-list <- get_kegg_list(keg_gene@result$ID[ID])
-my_ppi <- draw_ppi(file_num = 9, log_crit = log_crit, list = list)
+list <- get_kegg_list(kegg_id_df$hsa[265])
+my_ppi <- draw_ppi(file_num = 8, log_crit = log_crit, list = list)
 
 ### venn diagram
 AZA_venn <- multi_venn(name_df$file_name[c(3,16,29,42)],dir = "up", log_crit = log_crit, title = paste0("AZA DEGs"," (|logFC|>",log_crit,")"))
@@ -979,3 +1100,19 @@ HCD_BAP_ORA <- run_myORA(13,fun="enrichKEGG","HCD_BAP_ORA_KEGG")
 
 kegg_list <- get_kegg_list("hsa04068")
 draw_from_list(kegg_list,"CD")
+
+
+### 23.TF data base -----------------------------------------------------------------
+# 假设您下载的文件名为 "trrust_rawdata.human.tsv"
+trrust_data <- read.delim("/Users/benson/Documents/project/RNA-seq1-3/data/trrust_rawdata.human.tsv", header=FALSE)
+colnames(trrust_data) <- c("TF", "Target", "Interaction", "PMID")
+
+# 查看数据
+head(trrust_data)
+
+# 假设您感兴趣的基因是TP53
+target_gene <- "MMP1"
+tf_targets <- trrust_data[trrust_data$Target == target_gene, ]
+
+# 查看调控TP53的转录因子
+print(tf_targets)
