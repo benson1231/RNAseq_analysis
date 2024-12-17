@@ -1,3 +1,9 @@
+# RNAseq workflow
+
+
+
+
+
 # RNAseq-GSEA
 ### reference packages manual
 clusterprofiler  https://yulab-smu.top/biomedical-knowledge-mining-book/index.html  
